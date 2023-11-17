@@ -13,7 +13,7 @@ from scipy.stats import linregress
 from scipy.optimize import least_squares
 from takahashi93 import temperature as ex_temperature
 
-opt_k_carbonic = 1
+opt_k_carbonic = 10
 opt_total_borate = 1
 
 # Import the GLODAP gridded dataset (Lauvset et al., 2016)
