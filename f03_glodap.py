@@ -9,6 +9,12 @@ from matplotlib import pyplot as plt
 from cartopy import crs as ccrs, feature as cfeature
 import xarray as xr
 import numpy as np
+from scipy.stats import linregress
+from scipy.optimize import least_squares
+from takahashi93 import temperature as ex_temperature
+
+opt_k_carbonic = 1
+opt_total_borate = 1
 
 # Import the GLODAP gridded dataset (Lauvset et al., 2016)
 gpath = "/Users/matthew/Documents/data/GLODAP/GLODAPv2.2016b_MappedClimatologies/"
@@ -28,6 +34,10 @@ grads = [
     # "k_silicate",
 ]
 
+glodap_i = glodap.copy()
+glodap_i["silicate"] = glodap.silicate.interpolate_na("lat").interpolate_na("lon")
+glodap_i["PO4"] = glodap.PO4.interpolate_na("lat").interpolate_na("lon")
+
 # Calculate surface field of dlnpCO2/dT
 results = pyco2.sys(
     par1=glodap.isel(depth_surface=0).TAlk.data,
@@ -36,14 +46,10 @@ results = pyco2.sys(
     par2_type=2,
     temperature=glodap.isel(depth_surface=0).temperature.data,
     salinity=glodap.isel(depth_surface=0).salinity.data,
-    total_silicate=glodap.isel(depth_surface=0)
-    .interpolate_na("lat")
-    .interpolate_na("lon")
-    .silicate.data,
-    total_phosphate=glodap.isel(depth_surface=0)
-    .interpolate_na("lat")
-    .interpolate_na("lon")
-    .PO4.data,
+    total_silicate=glodap_i.isel(depth_surface=0).silicate.data,
+    total_phosphate=glodap_i.isel(depth_surface=0).PO4.data,
+    opt_k_carbonic=opt_k_carbonic,
+    opt_total_borate=opt_total_borate,
     grads_of=["pCO2", *grads],
     grads_wrt=["temperature", *grads],
 )
@@ -72,28 +78,59 @@ p95_k_percent = {
     for k, v in pCO2_wf_percent.items()
 }
 
+# %% Simulate T93 experiment across the globe
+fits_linear = np.full_like(glodap.dlnpCO2_dT.data, np.nan)
+fits_poly_const = np.full_like(glodap.dlnpCO2_dT.data, np.nan)
+fits_poly_Tcoeff = np.full_like(glodap.dlnpCO2_dT.data, np.nan)
+ex_pCO2 = np.full((*glodap.dlnpCO2_dT.shape, ex_temperature.size), np.nan)
+for i, t in enumerate(ex_temperature):
+    print(i)
+    ex_pCO2[:, :, i] = pyco2.sys(
+        par1=glodap.isel(depth_surface=0).TAlk.data,
+        par2=glodap.isel(depth_surface=0).TCO2.data,
+        par1_type=1,
+        par2_type=2,
+        temperature=t,
+        salinity=glodap.isel(depth_surface=0).salinity.data,
+        total_silicate=glodap_i.isel(depth_surface=0).silicate.data,
+        total_phosphate=glodap_i.isel(depth_surface=0).PO4.data,
+        opt_k_carbonic=opt_k_carbonic,
+        opt_total_borate=opt_total_borate,
+    )["pCO2"]
+for i in range(180):
+    print(i)
+    for j in range(360):
+        if ~np.isnan(ex_pCO2[i, j, 0]):
+            ex_lnpCO2 = np.log(ex_pCO2[i, j, :])
+            ex_linear = linregress(ex_temperature, ex_lnpCO2)
+            fits_linear[i, j] = ex_linear.slope
+            ex_poly = np.polyfit(ex_temperature, ex_lnpCO2, 2)
+            fits_poly_const[i, j], fits_poly_Tcoeff[i, j] = ex_poly[:2]
+glodap["fits_linear"] = (("lat", "lon"), fits_linear * 100)
+
 # %% Visualise - map
-fig, ax = plt.subplots(
-    dpi=300, subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
-)
-fm = glodap.dlnpCO2_dT.plot(
-    ax=ax, transform=ccrs.PlateCarree(), add_colorbar=False, vmin=3.95, vmax=4.7
-)
-plt.colorbar(
-    fm,
-    location="bottom",
-    label="100 × ∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$",
-    pad=0.05,
-    aspect=20,
-    fraction=0.05,
-    extend="both",
-)
-ax.add_feature(
-    cfeature.NaturalEarthFeature("physical", "land", "50m"),
-    facecolor=0.1 * np.array([1, 1, 1]),
-)
-fig.tight_layout()
-fig.savefig("figures/f03_map.png")
+for fvar in ["dlnpCO2_dT", "fits_linear"]:
+    fig, ax = plt.subplots(
+        dpi=300, subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
+    )
+    fm = glodap[fvar].plot(
+        ax=ax, transform=ccrs.PlateCarree(), add_colorbar=False, vmin=3.95, vmax=4.7
+    )
+    plt.colorbar(
+        fm,
+        location="bottom",
+        label="100 × ∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$",
+        pad=0.05,
+        aspect=20,
+        fraction=0.05,
+        extend="both",
+    )
+    ax.add_feature(
+        cfeature.NaturalEarthFeature("physical", "land", "50m"),
+        facecolor=0.1 * np.array([1, 1, 1]),
+    )
+    fig.tight_layout()
+    fig.savefig("figures/f03_map_{}.png".format(fvar))
 
 # %% Visualise - histogram
 fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
@@ -101,8 +138,23 @@ ax.hist(
     glodap.dlnpCO2_dT.data.ravel(),
     bins=np.arange(3.5, 5, 0.01),
     facecolor="xkcd:midnight",
+    label="PyCO2SYS",
 )
-ax.set_xlim((glodap.dlnpCO2_dT.min(), glodap.dlnpCO2_dT.max()))
+ax.hist(
+    glodap.fits_linear.data.ravel(),
+    bins=np.arange(3.5, 5, 0.01),
+    facecolor="xkcd:ocean blue",
+    alpha=0.85,
+    label="T93 experiment",
+)
+ax.legend()
+ax.set_xlim(
+    (
+        min(glodap.fits_linear.min(), glodap.dlnpCO2_dT.min()),
+        max(glodap.fits_linear.max(), glodap.dlnpCO2_dT.max()),
+    )
+)
+ax.set_xlim((3.8, 4.8))
 ax.set_ylabel("Frequency")
 ax.set_xlabel("100 × ∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$")
 fig.tight_layout()
@@ -156,3 +208,49 @@ ax.set_ylabel("Contribution to ∂(ln $p$CO$_2$)/∂$T$ / %")
 ax.tick_params(top=True, labeltop=True)
 fig.tight_layout()
 fig.savefig("figures/f03_violins.png")
+
+# %% Temperature relationship
+fx = glodap.isel(depth_surface=0).temperature.data.ravel()
+fy = glodap.dlnpCO2_dT.data.ravel()
+L = ~np.isnan(fx) & ~np.isnan(fy)
+fx, fy = fx[L], fy[L]
+
+tfit = np.polyfit(fx, fy, 3)
+# tfit = array([-3.27613909e-06,  4.90600047e-04, -3.29258551e-02,  4.58750033e+00])
+fvx = np.linspace(np.min(fx), np.max(fx), num=500)
+fvy = np.polyval(tfit, fvx)
+
+
+def sensitivity(coeffs, temperature):
+    a, b, c, d = coeffs
+    return a + b * np.exp(c * (temperature + d))
+
+
+def _lsqfun_sensitivity(coeffs, temperature, dlnpCO2_dT):
+    return sensitivity(coeffs, temperature) - dlnpCO2_dT
+
+
+opt_result = least_squares(_lsqfun_sensitivity, [0, 1, -1, 0], args=(fx, fy))
+# opt_result['x'] = array([ 3.57413027,  1.32214733,  0.03284989, -8.09607568])
+fvy_exp = sensitivity(opt_result["x"], fvx)
+
+# Visualise
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    fx,
+    fy,
+    c="xkcd:midnight",
+    s=2,
+    edgecolor="none",
+    alpha=0.2,
+)
+# ax.plot(fvx, fvy)
+ax.plot(fvx, fvy_exp, c="xkcd:strawberry")
+ax.set_xlabel("Temperature / °C")
+ax.set_ylabel("∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$")
+# ax.scatter(
+#     glodap.isel(depth_surface=0).temperature.data.ravel(),
+#     glodap.fits_linear.data.ravel(),
+# )
+fig.tight_layout()
+fig.savefig("figures/f03_temperature_fit.png")

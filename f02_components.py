@@ -9,7 +9,8 @@ from matplotlib import pyplot as plt
 from takahashi93 import get_alkalinity, dic, tak93
 
 opt_k_carbonic = 10
-alkalinity, alkalinity_std = get_alkalinity(opt_k_carbonic)
+opt_total_borate = 1
+alkalinity, alkalinity_std = get_alkalinity(opt_k_carbonic, opt_total_borate)
 
 # Calculate components of dlnpCO2/dT using forward finite difference derivatives
 grads = [

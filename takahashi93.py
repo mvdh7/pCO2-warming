@@ -18,7 +18,7 @@ tak93 = dict(
 )
 
 
-def get_alkalinity(opt_k_carbonic):
+def get_alkalinity(opt_k_carbonic, opt_total_borate):
     # Determine alkalinity in the experiment
     r = pyco2.sys(
         par1=dic,
@@ -27,6 +27,7 @@ def get_alkalinity(opt_k_carbonic):
         par2_type=4,
         temperature=temperature,
         opt_k_carbonic=opt_k_carbonic,
+        opt_total_borate=opt_total_borate,
         **tak93,
     )
     alkalinity = np.mean(r["alkalinity"])
