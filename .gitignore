@@ -1,3 +1,9 @@
+# Mac stuff
+.DS_Store
+
+# Big datasets
+*.nc
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

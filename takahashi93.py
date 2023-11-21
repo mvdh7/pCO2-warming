@@ -19,7 +19,8 @@ tak93 = dict(
 
 
 def get_alkalinity(opt_k_carbonic, opt_total_borate):
-    # Determine alkalinity in the experiment
+    # Determine alkalinity in the experiment as the mean alkalinity calculated from DIC
+    # and pCO2 across all measurement points
     r = pyco2.sys(
         par1=dic,
         par1_type=2,
