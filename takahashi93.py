@@ -6,6 +6,7 @@ if pyco2path not in path:
 
 import PyCO2SYS as pyco2
 import numpy as np
+from scipy.optimize import least_squares
 
 # Data from Takahashi et al. (1993) Table A1
 dic = 2074
@@ -18,9 +19,10 @@ tak93 = dict(
 )
 
 
-def get_alkalinity(opt_k_carbonic, opt_total_borate):
-    # Determine alkalinity in the experiment as the mean alkalinity calculated from DIC
-    # and pCO2 across all measurement points
+def get_alkalinity_old(opt_k_carbonic, opt_total_borate):
+    """Determine alkalinity in the experiment as the mean alkalinity calculated from DIC
+    and pCO2 across all measurement points.
+    """
     r = pyco2.sys(
         par1=dic,
         par1_type=2,
@@ -34,3 +36,27 @@ def get_alkalinity(opt_k_carbonic, opt_total_borate):
     alkalinity = np.mean(r["alkalinity"])
     alkalinity_std = np.std(r["alkalinity"])
     return alkalinity, alkalinity_std
+
+
+def get_alkalinity(opt_k_carbonic, opt_total_borate):
+    """Determine alkalinity in the experiment as the best-fitting alkalinity to match
+    all the experiment pCO2 points.
+    """
+
+    def pCO2_from_alkalinity(alkalinity):
+        return pyco2.sys(
+            par1=dic,
+            par1_type=2,
+            par2=alkalinity,
+            par2_type=1,
+            temperature=temperature,
+            opt_k_carbonic=opt_k_carbonic,
+            opt_total_borate=opt_total_borate,
+            **tak93,
+        )["pCO2"]
+
+    def _lsqfun_pCO2_from_alkalinity(alkalinity, pCO2):
+        return pCO2_from_alkalinity(alkalinity) - pCO2
+
+    opt_result = least_squares(_lsqfun_pCO2_from_alkalinity, [2300], args=(pCO2,))
+    return opt_result["x"][0], np.sqrt(np.mean(opt_result.fun**2))

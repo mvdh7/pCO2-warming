@@ -43,20 +43,24 @@ for opt_k_carbonic in [10]:  # range(1, 18):
     plt.close()
 
 # %% Simulate the experiment with uncertainties in pCO2 and temperature
-pCO2_bias = 2
-temperature_precision = 0.05
-temperature_bias = 0.1
+# pCO2_precision = 2  # from study - use value from above instead
+pCO2_bias = 2  # guessed
+temperature_precision = 0.005  # based on decimal places of reporting, uniform distro
+temperature_bias = 0.005
+# ^ WOCE-era accuracy from
+# https://odv.awi.de/fileadmin/user_upload/odv/data/Gouretski-Koltermann-2004/ ...
+# ... BSH35_report_final.pdf
 
-nreps = 100
+nreps = 10_000
 sim_pCO2 = results["pCO2"] * np.ones((nreps, 1))
 # Add the random uncertainty in pCO2
 sim_pCO2 += rng.normal(loc=0, scale=pCO2_precision, size=(nreps, len(pCO2)))
 # Add the systematic uncertainty in pCO2 (need to fix scale below)
 sim_pCO2 += rng.normal(loc=0, scale=pCO2_bias, size=(nreps, 1))
 sim_temperature = temperature * np.ones((nreps, 1))
-# Add the random uncertainty in temperature
-sim_temperature += rng.normal(
-    loc=0, scale=temperature_precision, size=(nreps, len(pCO2))
+# Add the random uncertainty in temperature (from decimal places)
+sim_temperature += rng.uniform(
+    low=-temperature_precision, high=temperature_precision, size=(nreps, len(pCO2))
 )
 # Add the systematic uncertainty in pCO2 (need to fix scale below)
 sim_temperature += rng.normal(loc=0, scale=temperature_bias, size=(nreps, 1))
@@ -75,7 +79,10 @@ print(sim_slope_precision)
 fig, ax = plt.subplots(dpi=300)
 fx = np.array([np.min(temperature), np.max(temperature)])
 for i in range(nreps):
-    ax.plot(fx, fx * sim_slope[i] + sim_intercept[i], c="xkcd:navy", alpha=0.1, lw=2)
+    if i % 100 == 0:
+        ax.plot(
+            fx, fx * sim_slope[i] + sim_intercept[i], c="xkcd:navy", alpha=0.1, lw=2
+        )
 ax.set_xlabel("Temperature / °C")
 ax.set_ylabel("ln ($p$CO$_2$ / µatm)")
 fig.tight_layout()

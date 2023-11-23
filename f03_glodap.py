@@ -16,14 +16,24 @@ from takahashi93 import temperature as ex_temperature
 # opt_k_carbonic = 10
 opt_total_borate = 1
 
-# Import the GLODAP gridded dataset (Lauvset et al., 2016)
-gpath = "/Users/matthew/Documents/data/GLODAP/GLODAPv2.2016b_MappedClimatologies/"
-gvars = ["temperature", "salinity", "silicate", "PO4", "TCO2", "TAlk"]
-glodap = []
-for gvar in gvars:
-    gfile = "GLODAPv2.2016b.{}.nc".format(gvar)
-    glodap.append(xr.open_dataset(gpath + gfile)[gvar])
-glodap = xr.merge(glodap)
+# Import OceanSODA
+soda = xr.open_dataset(
+    "/Users/matthew/Documents/data/OceanSODA/0220059/5.5/data/0-data/"
+    + "OceanSODA_ETHZ-v2023.OCADS.01_1982-2022.nc"
+)
+gvars = ["temperature", "salinity", "talk", "dic"]
+
+# # Import the GLODAP gridded dataset (Lauvset et al., 2016)
+# gpath = "/Users/matthew/Documents/data/GLODAP/GLODAPv2.2016b_MappedClimatologies/"
+# gvars = ["temperature", "salinity", "silicate", "PO4", "TCO2", "TAlk"]
+# glodap = []
+# for gvar in gvars:
+#     gfile = "GLODAPv2.2016b.{}.nc".format(gvar)
+#     glodap.append(xr.open_dataset(gpath + gfile)[gvar])
+# glodap = xr.merge(glodap)
+# glodap_i = glodap.copy()
+# glodap_i["silicate"] = glodap.silicate.interpolate_na("lat").interpolate_na("lon")
+# glodap_i["PO4"] = glodap.PO4.interpolate_na("lat").interpolate_na("lon")
 
 grads = [
     "k_CO2",
@@ -34,27 +44,33 @@ grads = [
     # "k_silicate",
 ]
 
-glodap_i = glodap.copy()
-glodap_i["silicate"] = glodap.silicate.interpolate_na("lat").interpolate_na("lon")
-glodap_i["PO4"] = glodap.PO4.interpolate_na("lat").interpolate_na("lon")
 
 for opt_k_carbonic in range(1, 18):
+    print(opt_k_carbonic)
     # Calculate surface field of dlnpCO2/dT
     results = pyco2.sys(
-        par1=glodap.isel(depth_surface=0).TAlk.data,
-        par2=glodap.isel(depth_surface=0).TCO2.data,
+        # par1=glodap.isel(depth_surface=0).TAlk.data,
+        # par2=glodap.isel(depth_surface=0).TCO2.data,
+        par1=soda.talk.mean("time").data,
+        par2=soda.dic.mean("time").data,
         par1_type=1,
         par2_type=2,
-        temperature=glodap.isel(depth_surface=0).temperature.data,
-        salinity=glodap.isel(depth_surface=0).salinity.data,
-        total_silicate=glodap_i.isel(depth_surface=0).silicate.data,
-        total_phosphate=glodap_i.isel(depth_surface=0).PO4.data,
+        # temperature=glodap.isel(depth_surface=0).temperature.data,
+        # salinity=glodap.isel(depth_surface=0).salinity.data,
+        temperature=soda.temperature.mean("time").data,
+        salinity=soda.salinity.mean("time").data,
+        # total_silicate=glodap_i.isel(depth_surface=0).silicate.data,
+        # total_phosphate=glodap_i.isel(depth_surface=0).PO4.data,
         opt_k_carbonic=opt_k_carbonic,
         opt_total_borate=opt_total_borate,
         grads_of=["pCO2", *grads],
         grads_wrt=["temperature", *grads],
     )
-    glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
+    # glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
+    #     ("lat", "lon"),
+    #     results["dlnpCO2_dT"] * 100,
+    # )
+    soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
         ("lat", "lon"),
         results["dlnpCO2_dT"] * 100,
     )
@@ -68,19 +84,24 @@ for opt_k_carbonic in range(1, 18):
             results["d_" + k + "__d_temperature"] * results["d_pCO2__d_" + k]
         ) / results["pCO2"]
         pCO2_wf_components[k] = k_comp
-        glodap[k] = (("lat", "lon"), k_comp)
+        # glodap[k] = (("lat", "lon"), k_comp)
+        soda[k] = (("lat", "lon"), k_comp)
         pCO2_wf_percent[k] = 100 * k_comp / pCO2_wf
         pCO2_wf_sum += k_comp
         pCO2_wf_percent_sum += pCO2_wf_percent[k]
 
     # Calculate mean surface ocean conditions
-    mean_surface = {gvar: glodap[gvar].isel(depth_surface=0).mean() for gvar in gvars}
+    # mean_surface = {gvar: glodap[gvar].isel(depth_surface=0).mean() for gvar in gvars}
+    mean_surface = {gvar: soda[gvar].mean() for gvar in gvars}
     mean_k_percent = {k: np.nanmean(v) for k, v in pCO2_wf_percent.items()}
     std_k_percent = {k: np.nanstd(v) for k, v in pCO2_wf_percent.items()}
     p95_k_percent = {
         k: [np.percentile(v[~np.isnan(v)], 0.01), np.percentile(v[~np.isnan(v)], 0.99)]
         for k, v in pCO2_wf_percent.items()
     }
+
+    # TODO half-way through converting this from GLODAP to OceanSODA - but better to put
+    # it in a different script so I have both options!!!
 
     # %% Simulate T93 experiment across the globe
     fits_linear = np.full_like(
@@ -279,8 +300,8 @@ for opt_k_carbonic in range(1, 18):
         edgecolor="none",
         alpha=0.2,
     )
-    # ax.plot(fvx, fvy)
-    ax.plot(fvx, fvy_exp, c="xkcd:strawberry")
+    ax.plot(fvx, fvy, c="xkcd:strawberry")
+    # ax.plot(fvx, fvy_exp, c="xkcd:strawberry")
     ax.set_xlabel("Temperature / °C")
     ax.set_ylabel("∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$")
     # ax.scatter(
