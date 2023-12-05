@@ -155,7 +155,10 @@ fig.savefig("figures/f08_trend_10.png")
 
 # %% Map seasonal range and trend
 fig, axs = plt.subplots(
-    dpi=300, ncols=2, figsize=(17.4 / 2.54, 7 / 2.54), subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
+    dpi=300,
+    ncols=2,
+    figsize=(17.4 / 2.54, 7 / 2.54),
+    subplot_kw={"projection": ccrs.Robinson(central_longitude=205)},
 )
 ax = axs[0]
 fm = (soda["seasonal_range"] * 100).plot(
