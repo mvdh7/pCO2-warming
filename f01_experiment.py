@@ -90,7 +90,7 @@ ax.plot(
 )
 ax.plot(v_temperature, 100 * v_results["dlnpCO2_dT"], **style_pyco2)
 ax.set_xlabel("Equilibration temperature / °C")
-ax.set_ylabel("100 × ∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$")
+ax.set_ylabel("$η$ / 10$^{-2}$ °C$^{–1}$")
 ax = axs[2]
 # TODO Repeat this calculation as a map of the global ocean --- is it the high pCO2
 # or the high temperature that's causing the worst error?  Check the whole phase space!

@@ -1,0 +1,12 @@
+{
+    "author": "Luke Gregor",
+    "changelog": "v2021d: Extended from 1982-2020; Now using: OISSTv2.1 for SST and ice; SODAv3.4.2 MLD; salinity products are stacked on top of each other with the following priority ESA-CCI salinity (2010-2019), SODAv3.4.2 salinity (1982-2019), EN4.2.1 salinity (2020). For detailed changes, see the variable specific info. ",
+    "contact": "gregorl@ethz.ch",
+    "date": "2023-06-26",
+    "description": "talk and pco2 (more accurately fco2) are estimated with two step machine learning approaches, where data is first clustered into regions of similar variability and the regressed for each cluster. See talk and spco2 for machine learning details. The remaining parameters of the marine carbonate cycle are calculated from these two using PyCO2SYS. The following dissociation constants were used: K1K2 = Mehrbach refit by Dickson and Millero, KSO4 = Dickson 1990a, KF = Dickson & Riley 1979.",
+    "institution": "ETH Zuerich",
+    "product": "OSETHZ-v2023.GCB",
+    "reference": "Gregor, L. and Gruber, N.: OceanSODA-ETHZ: A global gridded data set of the surface ocean carbonate system for seasonal to decadal studies of ocean acidification, Earth Syst. Sci. Data Discuss., https://doi.org/10.5194/essd-13-777-2021, 2020.",
+    "source": "https://doi.org/10.25921/m5wx-ja34",
+    "version": "v2023.GCB"
+}

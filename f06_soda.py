@@ -16,46 +16,36 @@ from takahashi93 import temperature as ex_temperature
 # opt_k_carbonic = 10
 opt_total_borate = 1
 
-# Import the GLODAP gridded dataset (Lauvset et al., 2016)
-gpath = "/Users/matthew/Documents/data/GLODAP/GLODAPv2.2016b_MappedClimatologies/"
-gvars = ["temperature", "salinity", "silicate", "PO4", "TCO2", "TAlk"]
-glodap = []
-for gvar in gvars:
-    gfile = "GLODAPv2.2016b.{}.nc".format(gvar)
-    glodap.append(xr.open_dataset(gpath + gfile)[gvar])
-glodap = xr.merge(glodap)
-glodap_i = glodap.copy()
-glodap_i["silicate"] = glodap.silicate.interpolate_na("lat").interpolate_na("lon")
-glodap_i["PO4"] = glodap.PO4.interpolate_na("lat").interpolate_na("lon")
-
+# Import OceanSODA
+soda = xr.open_dataset(
+    "/Users/matthew/Documents/data/OceanSODA/0220059/5.5/data/0-data/"
+    + "OceanSODA_ETHZ-v2023.OCADS.01_1982-2022.nc"
+)
+gvars = ["temperature", "salinity", "talk", "dic"]
 grads = [
     "k_CO2",
     "k_carbonic_1",
     "k_carbonic_2",
     "k_borate",
     "k_water",
-    # "k_silicate",
 ]
-
 
 for opt_k_carbonic in range(1, 19):
     print(opt_k_carbonic)
     # Calculate surface field of dlnpCO2/dT
     results = pyco2.sys(
-        par1=glodap.isel(depth_surface=0).TAlk.data,
-        par2=glodap.isel(depth_surface=0).TCO2.data,
+        par1=soda.talk.mean("time").data,
+        par2=soda.dic.mean("time").data,
         par1_type=1,
         par2_type=2,
-        temperature=glodap.isel(depth_surface=0).temperature.data,
-        salinity=glodap.isel(depth_surface=0).salinity.data,
-        total_silicate=glodap_i.isel(depth_surface=0).silicate.data,
-        total_phosphate=glodap_i.isel(depth_surface=0).PO4.data,
+        temperature=soda.temperature.mean("time").data,
+        salinity=soda.salinity.mean("time").data,
         opt_k_carbonic=opt_k_carbonic,
         opt_total_borate=opt_total_borate,
         grads_of=["pCO2", *grads],
         grads_wrt=["temperature", *grads],
     )
-    glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
+    soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
         ("lat", "lon"),
         results["dlnpCO2_dT"] * 100,
     )
@@ -69,13 +59,13 @@ for opt_k_carbonic in range(1, 19):
             results["d_" + k + "__d_temperature"] * results["d_pCO2__d_" + k]
         ) / results["pCO2"]
         pCO2_wf_components[k] = k_comp
-        glodap[k] = (("lat", "lon"), k_comp)
+        soda[k] = (("lat", "lon"), k_comp)
         pCO2_wf_percent[k] = 100 * k_comp / pCO2_wf
         pCO2_wf_sum += k_comp
         pCO2_wf_percent_sum += pCO2_wf_percent[k]
 
     # Calculate mean surface ocean conditions
-    mean_surface = {gvar: glodap[gvar].isel(depth_surface=0).mean() for gvar in gvars}
+    mean_surface = {gvar: soda[gvar].mean() for gvar in gvars}
     mean_k_percent = {k: np.nanmean(v) for k, v in pCO2_wf_percent.items()}
     std_k_percent = {k: np.nanstd(v) for k, v in pCO2_wf_percent.items()}
     p95_k_percent = {
@@ -83,19 +73,19 @@ for opt_k_carbonic in range(1, 19):
         for k, v in pCO2_wf_percent.items()
     }
 
-    # %% Simulate T93 experiment across the globe
+    # Simulate T93 experiment across the globe
     fits_linear = np.full_like(
-        glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data, np.nan
+        soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data, np.nan
     )
     fits_poly_const = np.full_like(
-        glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data, np.nan
+        soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data, np.nan
     )
     fits_poly_Tcoeff = np.full_like(
-        glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data, np.nan
+        soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data, np.nan
     )
     ex_pCO2 = np.full(
         (
-            *glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].shape,
+            *soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].shape,
             ex_temperature.size,
         ),
         np.nan,
@@ -103,14 +93,12 @@ for opt_k_carbonic in range(1, 19):
     for i, t in enumerate(ex_temperature):
         print(i)
         ex_pCO2[:, :, i] = pyco2.sys(
-            par1=glodap.isel(depth_surface=0).TAlk.data,
-            par2=glodap.isel(depth_surface=0).TCO2.data,
+            par1=soda.talk.mean("time").data,
+            par2=soda.dic.mean("time").data,
             par1_type=1,
             par2_type=2,
             temperature=t,
-            salinity=glodap.isel(depth_surface=0).salinity.data,
-            total_silicate=glodap_i.isel(depth_surface=0).silicate.data,
-            total_phosphate=glodap_i.isel(depth_surface=0).PO4.data,
+            salinity=soda.salinity.mean("time").data,
             opt_k_carbonic=opt_k_carbonic,
             opt_total_borate=opt_total_borate,
         )["pCO2"]
@@ -123,22 +111,22 @@ for opt_k_carbonic in range(1, 19):
                 fits_linear[i, j] = ex_linear.slope
                 ex_poly = np.polyfit(ex_temperature, ex_lnpCO2, 2)
                 fits_poly_const[i, j], fits_poly_Tcoeff[i, j] = ex_poly[:2]
-    glodap["fits_linear_{:02.0f}".format(opt_k_carbonic)] = (
+    soda["fits_linear_{:02.0f}".format(opt_k_carbonic)] = (
         ("lat", "lon"),
         fits_linear * 100,
     )
 
+# %% Visualise - map
+for opt_k_carbonic in range(1, 19):
     # Get axis limits
-    pt = glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].to_numpy().ravel()
+    pt = soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].to_numpy().ravel()
     pt = pt[~np.isnan(pt)]
-    fl = glodap["fits_linear_{:02.0f}".format(opt_k_carbonic)].to_numpy().ravel()
+    fl = soda["fits_linear_{:02.0f}".format(opt_k_carbonic)].to_numpy().ravel()
     fl = fl[~np.isnan(fl)]
     xlims = (
         min(np.quantile(fl, 0.005), np.quantile(pt, 0.005)),
         max(np.quantile(fl, 0.995), np.quantile(pt, 0.995)),
     )
-
-    # %% Visualise - map
     for fvar in [
         "dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic),
         "fits_linear_{:02.0f}".format(opt_k_carbonic),
@@ -146,7 +134,7 @@ for opt_k_carbonic in range(1, 19):
         fig, ax = plt.subplots(
             dpi=300, subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
         )
-        fm = glodap[fvar].plot(
+        fm = soda[fvar].plot(
             ax=ax,
             transform=ccrs.PlateCarree(),
             add_colorbar=False,
@@ -168,20 +156,20 @@ for opt_k_carbonic in range(1, 19):
             facecolor=0.1 * np.array([1, 1, 1]),
         )
         fig.tight_layout()
-        fig.savefig("figures/f03/f03_map_{}_{:02.0f}.png".format(fvar, opt_k_carbonic))
+        fig.savefig("figures/f06/f06_map_{}.png".format(fvar))
         plt.show()
         plt.close()
 
-    # %% Visualise - histogram
+    # Visualise - histogram
     fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
     ax.hist(
-        glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
+        soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
         bins=np.arange(3.5, 5, 0.01),
         facecolor="xkcd:midnight",
         label="PyCO2SYS",
     )
     ax.hist(
-        glodap["fits_linear_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
+        soda["fits_linear_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
         bins=np.arange(3.5, 5, 0.01),
         facecolor="xkcd:ocean blue",
         alpha=0.85,
@@ -191,13 +179,13 @@ for opt_k_carbonic in range(1, 19):
     ax.set_xlim(xlims)
     # ax.set_xlim((3.8, 4.8))
     ax.set_ylabel("Frequency")
-    ax.set_xlabel("100 × ∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$")
+    ax.set_xlabel("$η$ / 10$^{-2}$ °C$^{–1}$")
     fig.tight_layout()
-    fig.savefig("figures/f03/f03_histogram_{:02.0f}.png".format(opt_k_carbonic))
+    fig.savefig("figures/f06/f06_histogram_{:02.0f}.png".format(opt_k_carbonic))
     plt.show()
     plt.close()
 
-    # %% Visualise - violins
+    # Visualise - violins
     fig, ax = plt.subplots(dpi=300, figsize=(8 / 2.54, 12 / 2.54))
     ifac = 1  # bigger number pushes the violins together
     fvars = grads.copy()
@@ -241,16 +229,16 @@ for opt_k_carbonic in range(1, 19):
         "k_silicate": r"$K_\mathrm{Si}^*$",
     }
     ax.set_xticklabels([flabels[k] for k in fvars])
-    ax.set_ylabel("Contribution to ∂(ln $p$CO$_2$)/∂$T$ / %")
+    ax.set_ylabel("Contribution to $η$ / %")
     ax.tick_params(top=True, labeltop=True)
     fig.tight_layout()
-    fig.savefig("figures/f03/f03_violins_{:02.0f}.png".format(opt_k_carbonic))
+    fig.savefig("figures/f06/f06_violins_{:02.0f}.png".format(opt_k_carbonic))
     plt.show()
     plt.close()
 
-    # %% Temperature relationship
-    fx = glodap.isel(depth_surface=0).temperature.data.ravel()
-    fy = glodap["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel()
+    # Temperature relationship
+    fx = soda.temperature.mean("time").data.ravel()
+    fy = soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel()
     L = ~np.isnan(fx) & ~np.isnan(fy)
     fx, fy = fx[L], fy[L]
 
@@ -281,17 +269,12 @@ for opt_k_carbonic in range(1, 19):
         alpha=0.2,
     )
     ax.plot(fvx, fvy, c="xkcd:strawberry")
-    # ax.plot(fvx, fvy_exp, c="xkcd:strawberry")
     ax.set_xlabel("Temperature / °C")
-    ax.set_ylabel("∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$")
-    # ax.scatter(
-    #     glodap.isel(depth_surface=0).temperature.data.ravel(),
-    #     glodap["fits_linear_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
-    # )
+    ax.set_ylabel("$η$ / 10$^{-2}$ °C$^{–1}$")
     fig.tight_layout()
-    fig.savefig("figures/f03/f03_temperature_fit_{:02.0f}.png".format(opt_k_carbonic))
+    fig.savefig("figures/f06/f06_temperature_fit_{:02.0f}.png".format(opt_k_carbonic))
     plt.show()
     plt.close()
 
-# Save GLODAP dataset with calculations in
-glodap.to_netcdf("quickload/f03_glodap.nc")
+# Save OceanSODA dataset with calculations in
+soda.to_netcdf("quickload/f06_soda.nc")
