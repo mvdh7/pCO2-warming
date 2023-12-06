@@ -117,6 +117,8 @@ for opt_k_carbonic in range(1, 19):
     )
 
 # %% Visualise - map
+all_polyfits = []
+
 for opt_k_carbonic in range(1, 19):
     # Get axis limits
     pt = soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].to_numpy().ravel()
@@ -243,6 +245,7 @@ for opt_k_carbonic in range(1, 19):
     fx, fy = fx[L], fy[L]
 
     tfit = np.polyfit(fx, fy, 3)
+    all_polyfits.append(tfit)
     # tfit = array([-3.27613909e-06,  4.90600047e-04, -3.29258551e-02,  4.58750033e+00])
     fvx = np.linspace(np.min(fx), np.max(fx), num=500)
     fvy = np.polyval(tfit, fvx)
@@ -258,7 +261,7 @@ for opt_k_carbonic in range(1, 19):
     # opt_result['x'] = array([ 3.57413027,  1.32214733,  0.03284989, -8.09607568])
     fvy_exp = sensitivity(opt_result["x"], fvx)
 
-    # Visualise
+    # Visualise - temperature fit
     fig, ax = plt.subplots(dpi=300)
     ax.scatter(
         fx,
@@ -267,6 +270,13 @@ for opt_k_carbonic in range(1, 19):
         s=2,
         edgecolor="none",
         alpha=0.2,
+    )
+    ax.text(
+        0.98,
+        0.95,
+        "$η$ = {:.3e} $T^3$ + {:.3e} $T^2$ + {:.3e} $T$ + {:.3e}".format(*tfit),
+        transform=ax.transAxes,
+        ha="right",
     )
     ax.plot(fvx, fvy, c="xkcd:strawberry")
     ax.set_xlabel("Temperature / °C")
@@ -277,4 +287,6 @@ for opt_k_carbonic in range(1, 19):
     plt.close()
 
 # Save OceanSODA dataset with calculations in
-soda.to_netcdf("quickload/f06_soda.nc")
+soda.to_zarr("quickload/f06_soda.zarr")
+all_polyfits = np.array(all_polyfits)
+np.savetxt("quickload/f06_all_polyfits.txt", all_polyfits)
