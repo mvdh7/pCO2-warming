@@ -30,7 +30,7 @@ grads = [
     "k_water",
 ]
 
-for opt_k_carbonic in range(1, 19):
+for opt_k_carbonic in [10]:#range(1, 19):
     print(opt_k_carbonic)
     # Calculate surface field of dlnpCO2/dT
     results = pyco2.sys(
