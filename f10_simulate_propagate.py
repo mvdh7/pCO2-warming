@@ -51,7 +51,7 @@ temperature_bias = 0.005
 # https://odv.awi.de/fileadmin/user_upload/odv/data/Gouretski-Koltermann-2004/ ...
 # ... BSH35_report_final.pdf
 
-nreps = 10_000
+nreps = 100_000
 sim_pCO2 = results["pCO2"] * np.ones((nreps, 1))
 # Add the random uncertainty in pCO2
 sim_pCO2 += rng.normal(loc=0, scale=pCO2_precision, size=(nreps, len(pCO2)))
@@ -80,36 +80,37 @@ print("Linear slope precision:  {:.5f}".format(sim_slope_precision))
 sim_poly_slope_precision = sim_polyfit[:, 1].std()
 sim_poly_squared_precision = sim_polyfit[:, 0].std()
 sim_poly_covmx = np.cov(sim_polyfit[:, :2].T)
+# ^ this is for the squared then slope terms in the quadratic equation
 print("Poly   slope precision:  {:.5f}".format(sim_poly_slope_precision))
 print("Poly squared precision:  {:.5f}".format(sim_poly_squared_precision))
 print("Poly        covariance: {:.2e}".format(sim_poly_covmx[0, 1]))
 
-# %% Polynomial uncertainty propagation
-fxl = np.linspace(np.min(temperature), np.max(temperature))
-jac_poly = np.array([fxl, np.ones_like(fxl)]).T
-uncert_poly_mx = jac_poly @ sim_poly_covmx @ jac_poly.T
-uncert_poly = np.sqrt(np.diag(uncert_poly_mx))
+# # %% Polynomial uncertainty propagation
+# fxl = np.linspace(np.min(temperature), np.max(temperature))
+# jac_poly = np.array([fxl, np.ones_like(fxl)]).T
+# uncert_poly_mx = jac_poly @ sim_poly_covmx @ jac_poly.T
+# uncert_poly = np.sqrt(np.diag(uncert_poly_mx))
 
-fxl_soda = np.linspace(-1.8, 35.83)
-jac_poly_soda = np.array([fxl_soda, np.ones_like(fxl_soda)]).T
-uncert_poly_soda = np.sqrt(np.diag(jac_poly_soda @ sim_poly_covmx @ jac_poly_soda.T))
+# fxl_soda = np.linspace(-1.8, 35.83)
+# jac_poly_soda = np.array([fxl_soda, np.ones_like(fxl_soda)]).T
+# uncert_poly_soda = np.sqrt(np.diag(jac_poly_soda @ sim_poly_covmx @ jac_poly_soda.T))
 
-# %% Visualise
-fx = np.array([np.min(temperature), np.max(temperature)])
-fig, ax = plt.subplots(dpi=300)
-for i in range(nreps):
-    if i % 100 == 0:
-        # ax.plot(
-        #     fx, fx * sim_slope[i] + sim_intercept[i], c="xkcd:navy", alpha=0.1, lw=2
-        # )
-        ax.plot(fxl, np.polyval(sim_polyfit[i], fxl), c="xkcd:navy", alpha=0.1, lw=2)
-ax.set_xlabel("Temperature / °C")
-ax.set_ylabel("ln ($p$CO$_2$ / µatm)")
-fig.tight_layout()
-
-# %% Propagate through to a correction
-t0 = 2
-t1 = 1
+# # %% Visualise
+# fx = np.array([np.min(temperature), np.max(temperature)])
+# fig, ax = plt.subplots(dpi=300)
+# for i in range(nreps):
+#     if i % 100 == 0:
+#         # ax.plot(
+#         #     fx, fx * sim_slope[i] + sim_intercept[i], c="xkcd:navy", alpha=0.1, lw=2
+#         # )
+#         ax.plot(fxl, np.polyval(sim_polyfit[i], fxl), c="xkcd:navy", alpha=0.1, lw=2)
+# ax.set_xlabel("Temperature / °C")
+# ax.set_ylabel("ln ($p$CO$_2$ / µatm)")
+# fig.tight_layout()
+#
+# # %% Propagate through to a correction
+t0 = 1
+t1 = 0
 dt = t1 - t0
 
 
@@ -121,29 +122,50 @@ def get_grad_linear(coeff, dt):
     return grad(get_linear)(coeff, dt)
 
 
+sim_linear = get_linear(sim_slope, dt)
+var_linear_sim = np.var(sim_linear)
+
 fx_linear = np.exp(0.0423 * dt)
 jac_linear = dt * fx_linear
 jac_linear_auto = get_grad_linear(0.0423, dt)
 assert np.isclose(jac_linear, jac_linear_auto)
-uncert_linear = jac_linear * sim_slope_precision
+var_linear = jac_linear**2 * sim_slope_precision**2
 
 
 fx_quad = np.exp(0.0433 * dt - 4.35e-5 * (t1**2 - t0**2))
 
 
 def get_quad(coeffs, t0, t1):
-    c0, c1 = coeffs
-    return np.exp(c0 * (t1 - t0) - c1 * (t1**2 - t0**2))
+    squared, slope = coeffs
+    return np.exp(slope * (t1 - t0) - squared * (t1**2 - t0**2))
 
 
 def get_jac_quad(coeffs, t0, t1):
     return jacobian(get_quad)(coeffs, t0, t1)
 
 
+sim_quad = get_quad(sim_polyfit[:, :2].T, t0, t1)
+var_quad_sim = np.var(sim_quad)
+
+
 jac_t0t1 = np.array([[t0, 1], [t1, 1]])
 uncert_t0t1 = jac_t0t1 @ sim_poly_covmx @ jac_t0t1.T
 
-jac_quad = np.array([[dt * fx_quad, -(t1**2 - t0**2) * fx_quad]])
-jac_quad_auto = get_jac_quad(np.array([0.0433, 4.35e-5]), t0, t1)
+jac_quad = np.array([[-(t1**2 - t0**2) * fx_quad, dt * fx_quad]])
+jac_quad_auto = get_jac_quad(np.array([4.35e-5, 0.0433]), t0, t1)
 assert np.allclose(jac_quad, jac_quad_auto)
-uncert_quad = (jac_quad @ uncert_t0t1 @ jac_quad.T)[0][0]
+var_quad = (jac_quad @ sim_poly_covmx @ jac_quad.T)[0][0]
+
+print(np.sqrt(var_linear), np.sqrt(var_quad))
+print(np.sqrt(var_linear_sim), np.sqrt(var_quad_sim))
+# ^ these are the uncertainties in the term that gets multiplied by pCO2 to find the
+# t-corrected pCO2
+
+# For a cooling correction (t0 > t1):
+# direct calculation slightly underestimates simulated error for linear
+# direct calculation slightly  overestimates simulated error for quadratic
+# due to curvature? error is bigger at higher dt and virtually disappears at small dt
+# (small = e.g. 0.01 °C)
+# see e.g. https://en.wikipedia.org/wiki/Propagation_of_uncertainty#Caveats_and_warnings
+# the propagation equation includes a truncated Taylor series expansion
+# so that's the "problem" => can probably ignore
