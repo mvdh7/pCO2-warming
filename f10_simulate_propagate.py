@@ -147,10 +147,6 @@ def get_jac_quad(coeffs, t0, t1):
 sim_quad = get_quad(sim_polyfit[:, :2].T, t0, t1)
 var_quad_sim = np.var(sim_quad)
 
-
-jac_t0t1 = np.array([[t0, 1], [t1, 1]])
-uncert_t0t1 = jac_t0t1 @ sim_poly_covmx @ jac_t0t1.T
-
 jac_quad = np.array([[-(t1**2 - t0**2) * fx_quad, dt * fx_quad]])
 jac_quad_auto = get_jac_quad(np.array([4.35e-5, 0.0433]), t0, t1)
 assert np.allclose(jac_quad, jac_quad_auto)
@@ -160,6 +156,7 @@ print(np.sqrt(var_linear), np.sqrt(var_quad))
 print(np.sqrt(var_linear_sim), np.sqrt(var_quad_sim))
 # ^ these are the uncertainties in the term that gets multiplied by pCO2 to find the
 # t-corrected pCO2
+print(100 * np.sqrt(var_linear) / fx_linear, 100 * np.sqrt(var_quad) / fx_quad)
 
 # For a cooling correction (t0 > t1):
 # direct calculation slightly underestimates simulated error for linear
@@ -169,3 +166,29 @@ print(np.sqrt(var_linear_sim), np.sqrt(var_quad_sim))
 # see e.g. https://en.wikipedia.org/wiki/Propagation_of_uncertainty#Caveats_and_warnings
 # the propagation equation includes a truncated Taylor series expansion
 # so that's the "problem" => can probably ignore
+
+# %% Plot final uncertainties against temperature
+u_t = np.linspace(-1.8, 35.83)
+u_dt = 1
+quad_coeffs = np.array([4.35e-5, 0.0433])
+u_quad_jac = get_jac_quad(quad_coeffs, u_t, u_t + u_dt)
+u_quad_covmx = u_quad_jac @ sim_poly_covmx @ u_quad_jac.T
+u_quad_std = np.sqrt(np.diag(u_quad_covmx))
+u_factor = get_quad(quad_coeffs, u_t, u_t + u_dt)
+u_quad_pct = 100 * u_quad_std / u_factor
+
+u_linear = np.exp(0.0423 * u_dt)
+u_linear_grad = u_dt * u_linear
+u_linear_var = u_linear_grad**2 * sim_slope_precision**2
+u_linear_pct = 100 * np.sqrt(u_linear_var) / u_linear
+
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
+ax.plot(u_t, u_quad_pct, label="Quadratic fit", c="xkcd:navy", lw=2)
+ax.axhline(u_linear_pct, label="Linear fit", c="xkcd:navy", lw=2, ls=":")
+ax.set_xlim(u_t[0], u_t[-1])
+ax.set_ylim([0, 0.6])
+ax.set_xlabel("Temperature / °C")
+ax.set_ylabel("Uncertainty in $p$CO$_2$ after\na {:+} °C correction / %".format(u_dt))
+ax.legend()
+fig.tight_layout()
+fig.savefig("figures/f10_uncertainty_factor.png")
