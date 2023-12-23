@@ -6,7 +6,7 @@ if pyco2path not in path:
 
 import PyCO2SYS as pyco2
 from matplotlib import pyplot as plt
-import numpy as np
+from autograd import numpy as np, grad, jacobian
 from scipy.stats import linregress
 from takahashi93 import get_alkalinity, dic, tak93, pCO2, temperature
 
@@ -112,13 +112,33 @@ t0 = 2
 t1 = 1
 dt = t1 - t0
 
+def get_linear(coeff, dt):
+    return np.exp(coeff * dt)
+
+def get_grad_linear(coeff, dt):
+    return grad(get_linear)(coeff, dt)
+
+
 fx_linear = np.exp(0.0423 * dt)
 jac_linear = dt * fx_linear
-uncert_linear = np.sqrt(jac_linear) * sim_slope_precision
+jac_linear_auto = get_grad_linear(0.0423, dt)
+assert np.isclose(jac_linear, jac_linear_auto)
+uncert_linear = jac_linear * sim_slope_precision
+
 
 fx_quad = np.exp(0.0433 * dt - 4.35e-5 * (t1**2 - t0**2))
+
+def get_quad(coeffs, t0, t1):
+    c0, c1 = coeffs
+    return np.exp(c0 * (t1 - t0) - c1 * (t1**2 - t0**2))
+
+def get_jac_quad(coeffs, t0, t1):
+    return jacobian(get_quad)(coeffs, t0, t1)
+
 jac_t0t1 = np.array([[t0, 1], [t1, 1]])
 uncert_t0t1 = jac_t0t1 @ sim_poly_covmx @ jac_t0t1.T
 
-jac_quad = np.array([[dt * fx_quad, (t1**2 - t0**2) * fx_quad]])
+jac_quad = np.array([[dt * fx_quad, -(t1**2 - t0**2) * fx_quad]])
+jac_quad_auto = get_jac_quad(np.array([0.0433, 4.35e-5]), t0, t1)
+assert np.allclose(jac_quad, jac_quad_auto)
 uncert_quad = (jac_quad @ uncert_t0t1 @ jac_quad.T)[0][0]
