@@ -10,7 +10,7 @@ import xarray as xr
 from matplotlib import pyplot as plt
 import numpy as np
 
-soda = xr.open_dataset("quickload/f06_soda.nc")
+soda = xr.open_dataset("quickload/f06_soda.zarr", engine="zarr")
 opt_total_borate = 1
 
 grads = [
@@ -45,7 +45,7 @@ for opt_k_carbonic in range(1, 19):
     )
     soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
         ("lat", "lon"),
-        results["dlnpCO2_dT"] * 100,
+        results["dlnpCO2_dT"] * 1e3,
     )
     pCO2_wf[o] = results["d_pCO2__d_temperature"] / results["pCO2"]
     pCO2_wf_components[o] = {}
@@ -70,7 +70,7 @@ fig, ax = plt.subplots(dpi=300, figsize=(17.4 / 2.54, 11 / 2.54))
 fvars = ["k_CO2", "k_borate", "k_water"]
 widths = 0.85
 for i, var in enumerate(fvars):
-    fvar = pCO2_wf_components[10][var] * 100
+    fvar = pCO2_wf_components[10][var] * 1e3
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [i],
@@ -105,11 +105,9 @@ assert len(set(okc_order)) == 18
 assert np.all(np.isin(okc_order, range(1, 19)))
 for x, o in enumerate(okc_order):
     xpos = i + x + 1
-    ax.text(
-        xpos, 6.5, okc_codes[o], ha="center", va="bottom", rotation=90, fontsize=8.5
-    )
+    ax.text(xpos, 65, okc_codes[o], ha="center", va="bottom", rotation=90, fontsize=8.5)
     c = next(colours)
-    fvar = pCO2_wf_components[o]["k_carbonic_1"] * 100
+    fvar = pCO2_wf_components[o]["k_carbonic_1"] * 1e3
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [xpos],
@@ -119,7 +117,7 @@ for x, o in enumerate(okc_order):
     )
     parts["bodies"][0].set_facecolor(c)
     parts["bodies"][0].set_alpha(0.6)
-    fvar = pCO2_wf_components[o]["k_carbonic_2"] * 100
+    fvar = pCO2_wf_components[o]["k_carbonic_2"] * 1e3
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [i + x + 1],
@@ -129,7 +127,7 @@ for x, o in enumerate(okc_order):
     )
     parts["bodies"][0].set_facecolor(c)
     parts["bodies"][0].set_alpha(0.4)
-    fvar = pCO2_wf[o] * 100
+    fvar = pCO2_wf[o] * 1e3
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [i + x + 1],
@@ -139,24 +137,24 @@ for x, o in enumerate(okc_order):
     )
     parts["bodies"][0].set_facecolor(c)
     parts["bodies"][0].set_alpha(0.8)
-ax.plot([2.4, 20.6], [4.23, 4.23], c="xkcd:dark", alpha=0.8, ls=":", lw=1.5)
+ax.plot([2.4, 20.6], [42.3, 42.3], c="xkcd:dark", alpha=0.8, ls=":", lw=1.5)
 ax.grid(alpha=0.3, axis="y")
 ax.grid(alpha=0.05, axis="x")
 ax.set_xlim((-1, 21))
 ax.axhline(0, c="k", lw=0.8)
-ax.set_yticks(np.arange(-6, 7, 1.5))
-ax.set_ylim([-4.5, 6])
+ax.set_yticks(np.arange(-60, 70, 15))
+ax.set_ylim([-45, 60])
 ax.set_xticks(np.arange(0, 21))
-ax.text(2.45, 3.95, "Total →", va="center", ha="right", fontsize=9)
-ax.text(2.45, -2.2, "$K_1^*$ →", va="center", ha="right", fontsize=9)
-ax.text(2.45, 2.35, "$K_2^*$ →", va="center", ha="right", fontsize=9)
+ax.text(2.45, 39.5, "Total →", va="center", ha="right", fontsize=9)
+ax.text(2.45, -22, "$K_1^*$ →", va="center", ha="right", fontsize=9)
+ax.text(2.45, 23.5, "$K_2^*$ →", va="center", ha="right", fontsize=9)
 fxlabels = [r"$K_{\mathrm{CO}_2}^*$", r"$K_\mathrm{B}^*$", "$K_w^*$"]
 for i, fxl in enumerate(fxlabels):
-    ax.text(i, 6.4, fxl, ha="center", va="bottom")
+    ax.text(i, 64, fxl, ha="center", va="bottom")
 for o in okc_order:
     fxlabels.append(str(o))
 ax.set_xticklabels(fxlabels)
-ax.set_ylabel("Contribution to $η$ / 10$^{-2}$ °C$^{–1}$")
+ax.set_ylabel("Contribution to $η$ / kK$^{–1}$")
 ax.tick_params(top=True, labeltop=False)
 brackets = dict(
     xycoords="data",
@@ -168,13 +166,13 @@ brackets = dict(
     ),
     annotation_clip=False,
 )
-anx = -6
+anx = -60
 ax.annotate("", xy=(3, anx), xytext=(9, anx), **brackets)
-ax.text(6, anx - 0.6, "Mehrbach", ha="center", va="top", c="xkcd:grey blue")
+ax.text(6, anx - 6, '"Mehrbach"', ha="center", va="top", c="xkcd:grey blue")
 ax.annotate("", xy=(10, anx), xytext=(11, anx), **brackets)
-ax.text(10.5, anx - 0.6, "GEOSECS", ha="center", va="top", c="xkcd:grey blue")
+ax.text(10.5, anx - 6, "GEOSECS", ha="center", va="top", c="xkcd:grey blue")
 ax.annotate("", xy=(14, anx), xytext=(17, anx), **brackets)
-ax.text(15.5, anx - 0.6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
+ax.text(15.5, anx - 6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
 fig.tight_layout()
 fig.savefig("figures/f07_violins_soda.png")
 plt.show()

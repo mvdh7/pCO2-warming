@@ -86,7 +86,7 @@ for i, v in enumerate(
 plt.colorbar(
     fm,
     location="bottom",
-    label="$T$-conversion error / µatm °C$^{-1}$",
+    label="$t$ conversion bias / µatm °C$^{-1}$",
     pad=0.08,
     aspect=20,
     fraction=0.04,
@@ -116,12 +116,12 @@ ax.hist(
     bins=bins,
     facecolor="xkcd:tangerine",
     alpha=0.7,
-    label="$T$-varying linear",
+    label="$t$-varying linear",
 )
 ax.set_xlim((-1.5, 1.5))
 ax.axvline(0, c="k", lw=0.8)
 ax.legend()
-ax.set_xlabel("$T$-conversion error / µatm °C$^{-1}$")
+ax.set_xlabel("$t$ conversion bias / µatm °C$^{-1}$")
 ax.set_ylabel("Frequency / $10^3$")
 ax.set_ylim([0, 25000])
 ax.set_yticks([0, 5000, 10000, 15000, 20000, 25000])

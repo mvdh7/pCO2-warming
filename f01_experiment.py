@@ -57,19 +57,19 @@ dewarmed_poly = v_pCO2 * np.exp(
 dewarming_cx_poly = dewarmed_poly - v_pCO2
 
 # Visualise similar to Takahashi et al. (1993) Figure A1
-style_linear = dict(c="k", label="T93 linear fit", alpha=0.9, lw=2.5)
-style_poly = dict(label="T93 quadratic fit", alpha=0.9, lw=2.5, ls="--")
-style_pyco2 = dict(c="xkcd:coral", label="PyCO2SYS (L00)", alpha=0.9, lw=2.5, ls=":")
-fig, axs = plt.subplots(dpi=300, nrows=3, figsize=(10 / 2.54, 21 / 2.54))
+style_linear = dict(c="k", label="Ta93 linear", alpha=0.9, lw=2.5)
+style_poly = dict(label="Ta93 quadratic", alpha=0.9, lw=2.5, ls="--")
+style_pyco2 = dict(c="xkcd:coral", label="PyCO2SYS (Lu00)", alpha=0.9, lw=2.5, ls=":")
+fig, axs = plt.subplots(dpi=300, ncols=2, figsize=(17.4 / 2.54, 8 / 2.54))
 ax = axs[0]
 # ax.set_title("opt_k_carbonic = {}".format(tak93['opt_k_carbonic']))
-ax.text(0, 1.03, "(a)", transform=ax.transAxes)
+ax.text(0, 1.05, "(a)", transform=ax.transAxes)
 ax.scatter(
     temperature,
     # np.log(pCO2),
     pCO2,
     c="k",
-    label="T93 measurements",
+    label="Ta93 measured",
     s=90,
     zorder=0,
     alpha=0.9,
@@ -82,23 +82,26 @@ ax.legend()
 ax.set_xlabel("Equilibration temperature / °C")
 ax.set_ylabel("$p$CO$_2$ / µatm")
 ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
+
 ax = axs[1]
-ax.text(0, 1.03, "(b)", transform=ax.transAxes)
-ax.axhline(100 * 0.0423, **style_linear)
+ax.text(0, 1.05, "(b)", transform=ax.transAxes)
+ax.axhline(1e3 * 0.0423, **style_linear)
 ax.plot(
-    v_temperature, 100 * (0.0433 - 8.7e-5 * v_temperature), c="xkcd:azure", **style_poly
+    v_temperature, 1e3 * (0.0433 - 8.7e-5 * v_temperature), c="xkcd:azure", **style_poly
 )
-ax.plot(v_temperature, 100 * v_results["dlnpCO2_dT"], **style_pyco2)
+ax.plot(v_temperature, 1e3 * v_results["dlnpCO2_dT"], **style_pyco2)
 ax.set_xlabel("Equilibration temperature / °C")
-ax.set_ylabel("$η$ / 10$^{-2}$ °C$^{–1}$")
-ax = axs[2]
-# TODO Repeat this calculation as a map of the global ocean --- is it the high pCO2
-# or the high temperature that's causing the worst error?  Check the whole phase space!
-ax.text(0, 1.03, "(c)", transform=ax.transAxes)
-ax.plot(v_temperature, dewarming_cx_linear - dewarming_cx_PyCO2SYS, **style_linear)
-ax.plot(v_temperature, dewarming_cx_poly - dewarming_cx_PyCO2SYS, **style_poly)
-ax.axhline(0, c="k", lw=0.8)
-ax.set_xlabel("Equilibration temperature / °C")
-ax.set_ylabel("Warming corr. error / µatm")
+ax.set_ylabel("$η$ / kK$^{–1}$")
+
+# ax = axs[2]
+# # TODO Repeat this calculation as a map of the global ocean --- is it the high pCO2
+# # or the high temperature that's causing the worst error?  Check the whole phase space!
+# ax.text(0, 1.03, "(c)", transform=ax.transAxes)
+# ax.plot(v_temperature, dewarming_cx_linear - dewarming_cx_PyCO2SYS, **style_linear)
+# ax.plot(v_temperature, dewarming_cx_poly - dewarming_cx_PyCO2SYS, **style_poly)
+# ax.axhline(0, c="k", lw=0.8)
+# ax.set_xlabel("Equilibration temperature / °C")
+# ax.set_ylabel("Warming corr. error / µatm")
+
 fig.tight_layout()
 fig.savefig("figures/f01_L00.png")

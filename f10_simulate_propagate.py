@@ -32,15 +32,15 @@ for opt_k_carbonic in [10]:  # range(1, 18):
     pCO2_error = pCO2 - results["pCO2"]
     pCO2_precision = pCO2_error.std()
     # ^ 2.6 µatm for opt_k_carbonic=10; T93 state "precision... approximately ±2 µatm"
-    fig, ax = plt.subplots(dpi=300)
-    ax.scatter(temperature, pCO2_error)
-    ax.axhline(0, c="k", lw=0.8)
-    ax.set_xlabel("Temperature / °C")
-    ax.set_ylabel("$p$CO$_2$ error / µatm")
-    ax.set_title("opt_k_carbonic = {}".format(opt_k_carbonic))
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    # fig, ax = plt.subplots(dpi=300)
+    # ax.scatter(temperature, pCO2_error)
+    # ax.axhline(0, c="k", lw=0.8)
+    # ax.set_xlabel("Temperature / °C")
+    # ax.set_ylabel("$p$CO$_2$ error / µatm")
+    # ax.set_title("opt_k_carbonic = {}".format(opt_k_carbonic))
+    # fig.tight_layout()
+    # plt.show()
+    # plt.close()
 
 # %% Simulate the experiment with uncertainties in pCO2 and temperature
 # pCO2_precision = 2  # from study - use value from above instead
@@ -68,48 +68,48 @@ sim_slope = np.full(nreps, np.nan)
 sim_intercept = np.full(nreps, np.nan)
 sim_polyfit = []
 for i in range(nreps):
-    i_lr = linregress(sim_temperature[i], np.log(sim_pCO2[i]))
+    i_lr = linregress(sim_temperature[i] * 1e-3, np.log(sim_pCO2[i]))
     sim_slope[i] = i_lr.slope
     sim_intercept[i] = i_lr.intercept
-    sim_polyfit.append(np.polyfit(sim_temperature[i], np.log(sim_pCO2[i]), 2))
+    sim_polyfit.append(np.polyfit(sim_temperature[i] * 1e-3, np.log(sim_pCO2[i]), 2))
 sim_polyfit = np.array(sim_polyfit)
 
 # Get statistics
 sim_slope_precision = sim_slope.std()
-print("Linear slope precision:  {:.5f}".format(sim_slope_precision))
+print("Linear slope precision:  {:.2f} / kK".format(sim_slope_precision))
 sim_poly_slope_precision = sim_polyfit[:, 1].std()
 sim_poly_squared_precision = sim_polyfit[:, 0].std()
 sim_poly_covmx = np.cov(sim_polyfit[:, :2].T)
 # ^ this is for the squared then slope terms in the quadratic equation
-print("Poly   slope precision:  {:.5f}".format(sim_poly_slope_precision))
-print("Poly squared precision:  {:.5f}".format(sim_poly_squared_precision))
-print("Poly        covariance: {:.2e}".format(sim_poly_covmx[0, 1]))
+print("Poly   slope precision:  {:.2f} / kK".format(sim_poly_slope_precision))
+print("Poly squared precision:  {:.1f} / kK**2".format(sim_poly_squared_precision))
+print("Poly        covariance: {:.1f} / kK**3".format(sim_poly_covmx[0, 1]))
 
-# # %% Polynomial uncertainty propagation
-# fxl = np.linspace(np.min(temperature), np.max(temperature))
-# jac_poly = np.array([fxl, np.ones_like(fxl)]).T
-# uncert_poly_mx = jac_poly @ sim_poly_covmx @ jac_poly.T
-# uncert_poly = np.sqrt(np.diag(uncert_poly_mx))
+# %% Polynomial uncertainty propagation
+fxl = np.linspace(np.min(temperature), np.max(temperature))
+jac_poly = np.array([fxl, np.ones_like(fxl)]).T
+uncert_poly = np.sqrt(np.diag(jac_poly @ sim_poly_covmx @ jac_poly.T))
 
-# fxl_soda = np.linspace(-1.8, 35.83)
-# jac_poly_soda = np.array([fxl_soda, np.ones_like(fxl_soda)]).T
-# uncert_poly_soda = np.sqrt(np.diag(jac_poly_soda @ sim_poly_covmx @ jac_poly_soda.T))
+fxl_soda = np.linspace(-1.8, 35.83)
+jac_poly_soda = np.array([fxl_soda, np.ones_like(fxl_soda)]).T
+uncert_poly_soda = np.sqrt(np.diag(jac_poly_soda @ sim_poly_covmx @ jac_poly_soda.T))
 
-# # %% Visualise
-# fx = np.array([np.min(temperature), np.max(temperature)])
-# fig, ax = plt.subplots(dpi=300)
-# for i in range(nreps):
-#     if i % 100 == 0:
-#         # ax.plot(
-#         #     fx, fx * sim_slope[i] + sim_intercept[i], c="xkcd:navy", alpha=0.1, lw=2
-#         # )
-#         ax.plot(fxl, np.polyval(sim_polyfit[i], fxl), c="xkcd:navy", alpha=0.1, lw=2)
-# ax.set_xlabel("Temperature / °C")
-# ax.set_ylabel("ln ($p$CO$_2$ / µatm)")
-# fig.tight_layout()
-#
-# # %% Propagate through to a correction
-t0 = 1
+fig, axs = plt.subplots(dpi=300, figsize=(12 / 2.54, 16 / 2.54), nrows=2)
+ax = axs[0]
+ax.fill_betweenx(
+    [0, 2], fxl[0], fxl[-1], facecolor="xkcd:navy", alpha=0.2, label="Tak93 $t$ range"
+)
+ax.plot(fxl_soda, uncert_poly_soda * 1e3, c="xkcd:navy", lw=2, label="Quadratic fit")
+ax.set_xlim([fxl_soda[0], fxl_soda[-1]])
+ax.set_ylim([0.3, 1.8])
+ax.set_xlabel("Temperature / °C")
+ax.set_ylabel("$σ(η)$ / kK$^{–1}$")
+ax.axhline(sim_slope_precision * 1e3, c="xkcd:navy", lw=2, ls=":", label="Linear fit")
+ax.legend()
+ax.text(0, 1.05, "(a)", transform=ax.transAxes)
+
+# %% Propagate through to a correction
+t0 = 10
 t1 = 0
 dt = t1 - t0
 
@@ -152,8 +152,9 @@ jac_quad_auto = get_jac_quad(np.array([4.35e-5, 0.0433]), t0, t1)
 assert np.allclose(jac_quad, jac_quad_auto)
 var_quad = (jac_quad @ sim_poly_covmx @ jac_quad.T)[0][0]
 
-print(np.sqrt(var_linear), np.sqrt(var_quad))
-print(np.sqrt(var_linear_sim), np.sqrt(var_quad_sim))
+
+print("Direct", np.sqrt(var_linear), np.sqrt(var_quad))
+print("Simul.", np.sqrt(var_linear_sim), np.sqrt(var_quad_sim))
 # ^ these are the uncertainties in the term that gets multiplied by pCO2 to find the
 # t-corrected pCO2
 print(100 * np.sqrt(var_linear) / fx_linear, 100 * np.sqrt(var_quad) / fx_quad)
@@ -182,13 +183,19 @@ u_linear_grad = u_dt * u_linear
 u_linear_var = u_linear_grad**2 * sim_slope_precision**2
 u_linear_pct = 100 * np.sqrt(u_linear_var) / u_linear
 
-fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
+# fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
+ax = axs[1]
 ax.plot(u_t, u_quad_pct, label="Quadratic fit", c="xkcd:navy", lw=2)
 ax.axhline(u_linear_pct, label="Linear fit", c="xkcd:navy", lw=2, ls=":")
 ax.set_xlim(u_t[0], u_t[-1])
 ax.set_ylim([0, 0.6])
 ax.set_xlabel("Temperature / °C")
-ax.set_ylabel("Uncertainty in $p$CO$_2$ after\na {:+} °C correction / %".format(u_dt))
-ax.legend()
+ax.set_ylabel("$σ$($p$CO$_2$ at $t$ + 1 °C) / %")
+# ax.legend()
+ax.text(0, 1.05, "(b)", transform=ax.transAxes)
+ax.fill_betweenx(
+    [0, 2], fxl[0], fxl[-1], facecolor="xkcd:navy", alpha=0.2, label="T93 $T$ range"
+)
 fig.tight_layout()
-fig.savefig("figures/f10_uncertainty_factor.png")
+# fig.savefig("figures/f10_uncertainty_factor.png")
+fig.savefig("figures/f10_uncertainty.png")

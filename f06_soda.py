@@ -10,7 +10,8 @@ from cartopy import crs as ccrs, feature as cfeature
 import xarray as xr
 import numpy as np
 from scipy.stats import linregress
-from scipy.optimize import least_squares
+
+# from scipy.optimize import least_squares
 from takahashi93 import temperature as ex_temperature
 
 # opt_k_carbonic = 10
@@ -30,7 +31,7 @@ grads = [
     "k_water",
 ]
 
-for opt_k_carbonic in [10]:  # range(1, 19):
+for opt_k_carbonic in range(1, 19):
     print(opt_k_carbonic)
     # Calculate surface field of dlnpCO2/dT
     results = pyco2.sys(
@@ -47,7 +48,7 @@ for opt_k_carbonic in [10]:  # range(1, 19):
     )
     soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)] = (
         ("lat", "lon"),
-        results["dlnpCO2_dT"] * 100,
+        results["dlnpCO2_dT"] * 1e3,
     )
     pCO2_wf = results["d_pCO2__d_temperature"] / results["pCO2"]
     pCO2_wf_components = {}
@@ -107,14 +108,14 @@ for opt_k_carbonic in [10]:  # range(1, 19):
         for j in range(360):
             if ~np.isnan(ex_pCO2[i, j, 0]):
                 ex_lnpCO2 = np.log(ex_pCO2[i, j, :])
-                ex_linear = linregress(ex_temperature, ex_lnpCO2)
+                ex_linear = linregress(ex_temperature * 1e-3, ex_lnpCO2)
                 fits_linear[i, j] = ex_linear.slope
-                ex_poly = np.polyfit(ex_temperature, ex_lnpCO2, 2)
+                ex_poly = np.polyfit(ex_temperature * 1e-3, ex_lnpCO2, 2)
                 fits_poly_const[i, j], fits_poly_Tcoeff[i, j] = ex_poly[:2]
-    soda["fits_linear_{:02.0f}".format(opt_k_carbonic)] = (
-        ("lat", "lon"),
-        fits_linear * 100,
-    )
+    soda["fits_linear_{:02.0f}".format(opt_k_carbonic)] = (("lat", "lon"), fits_linear)
+
+# %% Quick load
+soda = xr.open_dataset("quickload/f06_soda.zarr", engine="zarr")
 
 # %% Visualise - map
 all_polyfits = []
@@ -129,13 +130,22 @@ for opt_k_carbonic in range(1, 19):
         min(np.quantile(fl, 0.005), np.quantile(pt, 0.005)),
         max(np.quantile(fl, 0.995), np.quantile(pt, 0.995)),
     )
-    for fvar in [
-        "dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic),
-        "fits_linear_{:02.0f}".format(opt_k_carbonic),
-    ]:
-        fig, ax = plt.subplots(
-            dpi=300, subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
-        )
+    fig, axs = plt.subplots(
+        dpi=300,
+        subplot_kw={"projection": ccrs.Robinson(central_longitude=205)},
+        figsize=[17.4 / 2.54, 7 / 2.54],
+        ncols=2,
+    )
+    for i, fvar in enumerate(
+        [
+            "dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic),
+            "fits_linear_{:02.0f}".format(opt_k_carbonic),
+        ]
+    ):
+        # fig, ax = plt.subplots(
+        #     dpi=300, subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
+        # )
+        ax = axs[i]
         fm = soda[fvar].plot(
             ax=ax,
             transform=ccrs.PlateCarree(),
@@ -144,10 +154,26 @@ for opt_k_carbonic in range(1, 19):
             vmin=xlims[0],
             vmax=xlims[1],
         )
+        ax.contour(
+            "lon",
+            "lat",
+            fvar,
+            [42.3],
+            data=soda,
+            colors="w",
+            transform=ccrs.PlateCarree(),
+            alpha=0.5,
+        )
+        if fvar.startswith("dlnpCO2"):
+            eta_type = "theoretical"
+            letter = "(a)"
+        elif fvar.startswith("fits_linear"):
+            eta_type = "experimental, linear"
+            letter = "(b)"
         plt.colorbar(
             fm,
             location="bottom",
-            label="100 × ∂(ln $p$CO$_2$)/∂$T$ / °C$^{–1}$",
+            label="$η$ ({})".format(eta_type) + " / kK$^{–1}$",
             pad=0.05,
             aspect=20,
             fraction=0.05,
@@ -157,136 +183,137 @@ for opt_k_carbonic in range(1, 19):
             cfeature.NaturalEarthFeature("physical", "land", "50m"),
             facecolor=0.1 * np.array([1, 1, 1]),
         )
-        fig.tight_layout()
-        fig.savefig("figures/f06/f06_map_{}.png".format(fvar))
-        plt.show()
-        plt.close()
-
-    # Visualise - histogram
-    fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
-    ax.hist(
-        soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
-        bins=np.arange(3.5, 5, 0.01),
-        facecolor="xkcd:midnight",
-        label="PyCO2SYS",
-    )
-    ax.hist(
-        soda["fits_linear_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
-        bins=np.arange(3.5, 5, 0.01),
-        facecolor="xkcd:ocean blue",
-        alpha=0.85,
-        label="T93 experiment",
-    )
-    ax.legend()
-    ax.set_xlim(xlims)
-    # ax.set_xlim((3.8, 4.8))
-    ax.set_ylabel("Frequency")
-    ax.set_xlabel("$η$ / 10$^{-2}$ °C$^{–1}$")
+        ax.text(0, 1, letter, transform=ax.transAxes)
     fig.tight_layout()
-    fig.savefig("figures/f06/f06_histogram_{:02.0f}.png".format(opt_k_carbonic))
+    fig.savefig("figures/f06/f06_map_both_{:02.0f}.png".format(opt_k_carbonic))
     plt.show()
     plt.close()
 
-    # Visualise - violins
-    fig, ax = plt.subplots(dpi=300, figsize=(8 / 2.54, 12 / 2.54))
-    ifac = 1  # bigger number pushes the violins together
-    fvars = grads.copy()
-    maxfreq = []
-    vdiff = []
-    for i, var in enumerate(fvars):
-        fvar = pCO2_wf_percent[var]
-        hist = np.histogram(fvar[~np.isnan(fvar)], bins=100)
-        maxfreq.append(np.max(hist[0]))
-        vdiff.append(np.mean(np.diff(hist[1])))
-    maxfreq = np.array(maxfreq) / max(maxfreq)
-    for i, var in enumerate(fvars):
-        fvar = pCO2_wf_percent[var]
-        parts = ax.violinplot(
-            fvar[~np.isnan(fvar)],
-            [i / ifac],
-            showextrema=False,
-            points=100,
-            widths=1.6 * maxfreq[i] / vdiff[i],
-        )
-        parts["bodies"][0].set_facecolor("xkcd:midnight")
-        parts["bodies"][0].set_alpha(0.8)
-        # ax.plot(
-        #     [i / ifac, i / ifac],
-        #     [np.nanmin(fvar), np.nanmax(fvar)],
-        #     c="xkcd:midnight",
-        #     lw=1,
-        # )
-    ax.grid(alpha=0.2, axis="y")
-    ax.set_xlim((-1, 6))
-    ax.axhline(0, c="k", lw=0.8)
-    ax.set_xticks(np.arange(0, len(fvars) / ifac, 1 / ifac))
-    ax.set_yticks(np.arange(-100, 120, 20))
-    ax.set_ylim([-80, 100])
-    flabels = {
-        "k_CO2": r"$K_{\mathrm{CO}_2}^*$",
-        "k_carbonic_2": "$K_2^*$",
-        "k_carbonic_1": "$K_1^*$",
-        "k_borate": r"$K_\mathrm{B}^*$",
-        "k_water": "$K_w^*$",
-        "k_silicate": r"$K_\mathrm{Si}^*$",
-    }
-    ax.set_xticklabels([flabels[k] for k in fvars])
-    ax.set_ylabel("Contribution to $η$ / %")
-    ax.tick_params(top=True, labeltop=True)
-    fig.tight_layout()
-    fig.savefig("figures/f06/f06_violins_{:02.0f}.png".format(opt_k_carbonic))
-    plt.show()
-    plt.close()
+    # # Visualise - histogram
+    # fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
+    # ax.hist(
+    #     soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
+    #     bins=np.arange(3.5, 5, 0.01),
+    #     facecolor="xkcd:midnight",
+    #     label="PyCO2SYS",
+    # )
+    # ax.hist(
+    #     soda["fits_linear_{:02.0f}".format(opt_k_carbonic)].data.ravel(),
+    #     bins=np.arange(3.5, 5, 0.01),
+    #     facecolor="xkcd:ocean blue",
+    #     alpha=0.85,
+    #     label="T93 experiment",
+    # )
+    # ax.legend()
+    # ax.set_xlim(xlims)
+    # # ax.set_xlim((3.8, 4.8))
+    # ax.set_ylabel("Frequency")
+    # ax.set_xlabel("$η$ / 10$^{-2}$ °C$^{–1}$")
+    # fig.tight_layout()
+    # fig.savefig("figures/f06/f06_histogram_{:02.0f}.png".format(opt_k_carbonic))
+    # plt.show()
+    # plt.close()
 
-    # Temperature relationship
-    fx = soda.temperature.mean("time").data.ravel()
-    fy = soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel()
-    L = ~np.isnan(fx) & ~np.isnan(fy)
-    fx, fy = fx[L], fy[L]
+    # # Visualise - violins
+    # fig, ax = plt.subplots(dpi=300, figsize=(8 / 2.54, 12 / 2.54))
+    # ifac = 1  # bigger number pushes the violins together
+    # fvars = grads.copy()
+    # maxfreq = []
+    # vdiff = []
+    # for i, var in enumerate(fvars):
+    #     fvar = pCO2_wf_percent[var]
+    #     hist = np.histogram(fvar[~np.isnan(fvar)], bins=100)
+    #     maxfreq.append(np.max(hist[0]))
+    #     vdiff.append(np.mean(np.diff(hist[1])))
+    # maxfreq = np.array(maxfreq) / max(maxfreq)
+    # for i, var in enumerate(fvars):
+    #     fvar = pCO2_wf_percent[var]
+    #     parts = ax.violinplot(
+    #         fvar[~np.isnan(fvar)],
+    #         [i / ifac],
+    #         showextrema=False,
+    #         points=100,
+    #         widths=1.6 * maxfreq[i] / vdiff[i],
+    #     )
+    #     parts["bodies"][0].set_facecolor("xkcd:midnight")
+    #     parts["bodies"][0].set_alpha(0.8)
+    #     # ax.plot(
+    #     #     [i / ifac, i / ifac],
+    #     #     [np.nanmin(fvar), np.nanmax(fvar)],
+    #     #     c="xkcd:midnight",
+    #     #     lw=1,
+    #     # )
+    # ax.grid(alpha=0.2, axis="y")
+    # ax.set_xlim((-1, 6))
+    # ax.axhline(0, c="k", lw=0.8)
+    # ax.set_xticks(np.arange(0, len(fvars) / ifac, 1 / ifac))
+    # ax.set_yticks(np.arange(-100, 120, 20))
+    # ax.set_ylim([-80, 100])
+    # flabels = {
+    #     "k_CO2": r"$K_{\mathrm{CO}_2}^*$",
+    #     "k_carbonic_2": "$K_2^*$",
+    #     "k_carbonic_1": "$K_1^*$",
+    #     "k_borate": r"$K_\mathrm{B}^*$",
+    #     "k_water": "$K_w^*$",
+    #     "k_silicate": r"$K_\mathrm{Si}^*$",
+    # }
+    # ax.set_xticklabels([flabels[k] for k in fvars])
+    # ax.set_ylabel("Contribution to $η$ / %")
+    # ax.tick_params(top=True, labeltop=True)
+    # fig.tight_layout()
+    # fig.savefig("figures/f06/f06_violins_{:02.0f}.png".format(opt_k_carbonic))
+    # plt.show()
+    # plt.close()
 
-    tfit = np.polyfit(fx, fy, 3)
-    all_polyfits.append(tfit)
-    # tfit = array([-3.27613909e-06,  4.90600047e-04, -3.29258551e-02,  4.58750033e+00])
-    fvx = np.linspace(np.min(fx), np.max(fx), num=500)
-    fvy = np.polyval(tfit, fvx)
+    # # Temperature relationship
+    # fx = soda.temperature.mean("time").data.ravel()
+    # fy = soda["dlnpCO2_dT_{:02.0f}".format(opt_k_carbonic)].data.ravel()
+    # L = ~np.isnan(fx) & ~np.isnan(fy)
+    # fx, fy = fx[L], fy[L]
 
-    def sensitivity(coeffs, temperature):
-        a, b, c, d = coeffs
-        return a + b * np.exp(c * (temperature + d))
+    # tfit = np.polyfit(fx, fy, 3)
+    # all_polyfits.append(tfit)
+    # # tfit = array([-3.27613909e-06,  4.90600047e-04, -3.29258551e-02,  4.58750033e+00])
+    # fvx = np.linspace(np.min(fx), np.max(fx), num=500)
+    # fvy = np.polyval(tfit, fvx)
 
-    def _lsqfun_sensitivity(coeffs, temperature, dlnpCO2_dT):
-        return sensitivity(coeffs, temperature) - dlnpCO2_dT
+    # def sensitivity(coeffs, temperature):
+    #     a, b, c, d = coeffs
+    #     return a + b * np.exp(c * (temperature + d))
 
-    opt_result = least_squares(_lsqfun_sensitivity, [0, 1, -1, 0], args=(fx, fy))
-    # opt_result['x'] = array([ 3.57413027,  1.32214733,  0.03284989, -8.09607568])
-    fvy_exp = sensitivity(opt_result["x"], fvx)
+    # def _lsqfun_sensitivity(coeffs, temperature, dlnpCO2_dT):
+    #     return sensitivity(coeffs, temperature) - dlnpCO2_dT
 
-    # Visualise - temperature fit
-    fig, ax = plt.subplots(dpi=300)
-    ax.scatter(
-        fx,
-        fy,
-        c="xkcd:midnight",
-        s=2,
-        edgecolor="none",
-        alpha=0.2,
-    )
-    ax.text(
-        0.98,
-        0.95,
-        "$η$ = {:.3e} $T^3$ + {:.3e} $T^2$ + {:.3e} $T$ + {:.3e}".format(*tfit),
-        transform=ax.transAxes,
-        ha="right",
-    )
-    ax.plot(fvx, fvy, c="xkcd:strawberry")
-    ax.set_xlabel("Temperature / °C")
-    ax.set_ylabel("$η$ / 10$^{-2}$ °C$^{–1}$")
-    fig.tight_layout()
-    fig.savefig("figures/f06/f06_temperature_fit_{:02.0f}.png".format(opt_k_carbonic))
-    plt.show()
-    plt.close()
+    # opt_result = least_squares(_lsqfun_sensitivity, [0, 1, -1, 0], args=(fx, fy))
+    # # opt_result['x'] = array([ 3.57413027,  1.32214733,  0.03284989, -8.09607568])
+    # fvy_exp = sensitivity(opt_result["x"], fvx)
 
-# Save OceanSODA dataset with calculations in
-soda.to_zarr("quickload/f06_soda.zarr")
-all_polyfits = np.array(all_polyfits)
-np.savetxt("quickload/f06_all_polyfits.txt", all_polyfits)
+    # # Visualise - temperature fit
+    # fig, ax = plt.subplots(dpi=300)
+    # ax.scatter(
+    #     fx,
+    #     fy,
+    #     c="xkcd:midnight",
+    #     s=2,
+    #     edgecolor="none",
+    #     alpha=0.2,
+    # )
+    # ax.text(
+    #     0.98,
+    #     0.95,
+    #     "$η$ = {:.3e} $T^3$ + {:.3e} $T^2$ + {:.3e} $T$ + {:.3e}".format(*tfit),
+    #     transform=ax.transAxes,
+    #     ha="right",
+    # )
+    # ax.plot(fvx, fvy, c="xkcd:strawberry")
+    # ax.set_xlabel("Temperature / °C")
+    # ax.set_ylabel("$η$ / 10$^{-2}$ °C$^{–1}$")
+    # fig.tight_layout()
+    # fig.savefig("figures/f06/f06_temperature_fit_{:02.0f}.png".format(opt_k_carbonic))
+    # plt.show()
+    # plt.close()
+
+# # Save OceanSODA dataset with calculations in
+# soda.to_zarr("quickload/f06_soda.zarr")
+# all_polyfits = np.array(all_polyfits)
+# np.savetxt("quickload/f06_all_polyfits.txt", all_polyfits)

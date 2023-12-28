@@ -11,6 +11,8 @@ from scipy.stats import linregress
 from matplotlib import dates as mdates, pyplot as plt
 from cartopy import crs as ccrs, feature as cfeature
 
+variable_var = "alkalinity"
+
 # Import OceanSODA-ETZH
 soda = xr.open_dataset(
     "/Users/matthew/Documents/data/OceanSODA/0220059/5.5/data/0-data/"
@@ -20,14 +22,27 @@ soda["year"] = soda.time.to_pandas().dt.year
 soda_years = np.unique(soda.year.data)
 soda_datenum = mdates.date2num(soda.time)
 
+alkalinity = soda.talk.mean(("lat", "lon")).data
+if not variable_var == "alkalinity":
+    alkalinity = [np.nanmean(alkalinity)]
+dic = soda.dic.mean(("lat", "lon")).data
+if not variable_var == "dic":
+    dic = [np.nanmean(dic)]
+temperature = soda.temperature.mean(("lat", "lon")).data
+if not variable_var == "temperature":
+    temperature = [np.nanmean(temperature)]
+salinity = soda.salinity.mean(("lat", "lon")).data
+if not variable_var == "salinity":
+    salinity = [np.nanmean(salinity)]
+
 # Calculate with PyCO2SYS - global mean
 results = pyco2.sys(
-    par1=soda.dic.mean(["lat", "lon"]).data,
-    par2=soda.talk.mean(["lat", "lon"]).data,
+    par1=dic,
+    par2=alkalinity,
     par1_type=2,
     par2_type=1,
-    temperature=soda.temperature.mean(["lat", "lon"]).data,
-    salinity=soda.salinity.mean(["lat", "lon"]).data,
+    temperature=temperature,
+    salinity=salinity,
     opt_k_carbonic=10,
     opt_buffers_mode=0,
 )
@@ -43,14 +58,26 @@ for a in range(0, 180, 1):
     for o in range(0, 360, 1):
         sodap = soda.isel(lat=a, lon=o)
         if not sodap.dic.isnull().all():
+            alkalinity = sodap.talk.data
+            if not variable_var == "alkalinity":
+                alkalinity = [np.nanmean(alkalinity)]
+            dic = sodap.dic.data
+            if not variable_var == "dic":
+                dic = [np.nanmean(dic)]
+            temperature = sodap.temperature.data
+            if not variable_var == "temperature":
+                temperature = [np.nanmean(temperature)]
+            salinity = sodap.salinity.data
+            if not variable_var == "salinity":
+                salinity = [np.nanmean(salinity)]
             soda_total_range[a, o] = 1
             eta = pyco2.sys(
-                par1=sodap.dic.data,
-                par2=sodap.talk.data,
+                par1=dic,
+                par2=alkalinity,
                 par1_type=2,
                 par2_type=1,
-                temperature=sodap.temperature.data,
-                salinity=sodap.salinity.data,
+                temperature=temperature,
+                salinity=salinity,
                 opt_k_carbonic=10,
                 opt_buffers_mode=0,
             )["dlnpCO2_dT"]
@@ -72,16 +99,8 @@ soda["total_range"] = (("lat", "lon"), soda_total_range)
 soda["seasonal_range"] = (("lat", "lon"), soda_seasonal_range)
 soda["seasonal_range_std"] = (("lat", "lon"), soda_seasonal_range_std)
 soda["trend"] = (("lat", "lon"), soda_trend)
-soda[
-    [
-        "year",
-        "dlnpCO2_dT_time",
-        "total_range",
-        "seasonal_range",
-        "seasonal_range_std",
-        "trend",
-    ]
-].to_zarr("quickload/f08_soda_ranges_only.zarr")
+
+soda.to_zarr("quickload/f12_soda_{}.zarr".format(variable_var))
 
 # #%%
 # sodap = soda.sel(lat=55, lon=-30, method='nearest')
@@ -97,9 +116,6 @@ soda[
 # )
 # sodap["dlnpCO2_dT"] = (("time"), results["dlnpCO2_dT"])
 # sodap.dlnpCO2_dT.plot()
-
-# %% Fast load
-soda = xr.open_dataset("quickload/f08_soda_ranges_only.zarr", engine="zarr")
 
 # %% Map seasonal range
 fig, ax = plt.subplots(
@@ -126,7 +142,7 @@ ax.add_feature(
     facecolor=0.1 * np.array([1, 1, 1]),
 )
 fig.tight_layout()
-fig.savefig("figures/f08_seasonal_range_10.png")
+fig.savefig("figures/f12_seasonal_range_{}.png".format(variable_var))
 
 # %% Map trend
 fig, ax = plt.subplots(
@@ -154,7 +170,7 @@ ax.add_feature(
     facecolor=0.1 * np.array([1, 1, 1]),
 )
 fig.tight_layout()
-fig.savefig("figures/f08_trend_10.png")
+fig.savefig("figures/f12_trend_{}.png".format(variable_var))
 
 # %% Map seasonal range and trend
 fig, axs = plt.subplots(
@@ -209,4 +225,4 @@ ax.add_feature(
 )
 ax.text(0, 1, "(d)", transform=ax.transAxes)
 fig.tight_layout()
-fig.savefig("figures/f08_seasons_and_trend_10.png")
+fig.savefig("figures/f12_seasons_and_trend_{}.png".format(variable_var))
