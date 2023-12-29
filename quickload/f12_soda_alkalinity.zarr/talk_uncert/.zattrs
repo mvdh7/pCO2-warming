@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "author": "Luke Gregor",
+    "cluster_input_file": "../models/v2023.GCB_talk/member_01/clusters.nc",
+    "cluster_vars": "['talk_glodap' 'medsea' 'salt_stacked_clim' 'temp_oisst_clim' 'nstar_woa']",
+    "data_input_file": "./OSETHv2023.GCB_data_1982-2022.nc",
+    "date": "2023-06-23",
+    "description": "surface talk predicted with a two-step cluster-regression approach",
+    "model_file_names": "../models/v2023.GCB_talk/member_01/svr/model_c**",
+    "n_clusters": 12,
+    "predictors": [
+        "temp_oisst",
+        "salt_stacked",
+        "silicate_woa",
+        "nitrate_star_woa",
+        "ssh_detrend_duacs"
+    ],
+    "target": "y_talk_glodap_ms"
+}

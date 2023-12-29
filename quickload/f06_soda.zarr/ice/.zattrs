@@ -1,0 +1,8 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "history": "[all_my_code@2023-06-23: lon_180W_180E] regridded to [-180 : 180] from [0 : 360]"
+}

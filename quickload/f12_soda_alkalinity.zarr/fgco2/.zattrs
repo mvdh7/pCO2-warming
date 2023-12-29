@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "description": "Sea-air CO2 fluxes for the OS-ETHZ-GRaCER method. Atmospheric pCO2 was taken from the SeaFlux dataset, where xCO2 (NOAAs Marine Boundary Layer product) is linearly interpolated onto a 1deg latitudinal grid. ERA5 sea level pressure (pH2O corrected) is used to map xCO2 to pCO2atm. Flux is calculated as the average of flux calculated from kw computed with the following wind products: ERA5, JRA55, NCEP1. We do not include CCMP2 as it only starts in 1988 and exclude NCEP2 as wind speed is inherently too large in the the second release of NCEP. kw is scaled individually for each of the wind products. Solubility of CO2 in seawater is from the SeaFlux product. spco2 (surface ocean pCO2) is calculated from fugacity using pyCO2SYS with Alkalinity from OceanSODA-ETHZ, SST from OISST and salinity from the Simple Ocean Data Assimmilation (SODA, unrelated to OceanSODA). Sea ice is from the OISSTv2 product. ",
+    "units": "mol/m2/s"
+}

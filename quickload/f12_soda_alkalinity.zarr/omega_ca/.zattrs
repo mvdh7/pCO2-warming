@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "standard_name": "calcite saturation state",
+    "units": "dimensionless"
+}

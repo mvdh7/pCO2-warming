@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "lat",
+        "lon"
+    ],
+    "description": "Area per pixel as calculated by pySeaFlux. The non-spherical shape of Earth is taken into account. Area calculated from the latitude and longitude coordinates of ice",
+    "long_name": "Area per pixel",
+    "units": "m^2"
+}

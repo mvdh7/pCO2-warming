@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "description": "solubility of CO2 in seawater calculated using the formulation byWeiss (1974) summarised in Wanninkhof (2014). salinity = EN4.2.2; temperature = NOAA OISSTv2; pressure = ERA5_msl",
+    "units": "mol/m3/uatm"
+}

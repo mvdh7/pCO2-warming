@@ -1,0 +1,8 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "region",
+        "time"
+    ],
+    "description": "Regionally integrated air-sea CO2 flux (positive downward) (using regional bounds)",
+    "units": "PgC/yr"
+}

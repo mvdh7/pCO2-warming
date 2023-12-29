@@ -1,0 +1,6 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "region"
+    ],
+    "description": "north > 30N; south < -30N; 30S < tropics <30N; global = sum(north, south, tropics)"
+}

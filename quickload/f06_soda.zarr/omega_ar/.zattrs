@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "standard_name": "aragonite saturation state",
+    "units": "dimensionless"
+}

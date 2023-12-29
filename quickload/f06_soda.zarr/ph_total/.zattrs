@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "description": "surface ocean pH on the total scale",
+    "units": "-log([H+])"
+}

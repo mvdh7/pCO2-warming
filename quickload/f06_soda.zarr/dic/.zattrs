@@ -1,0 +1,10 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "model_name": "dissicos",
+    "standard_name": "mole_concentration_of_dissolved_inorganic_carbon_in_sea_water",
+    "units": "umol/kg"
+}

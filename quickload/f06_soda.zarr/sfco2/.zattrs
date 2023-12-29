@@ -1,0 +1,29 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "author": "Luke Gregor",
+    "cluster_input_file": "../models/v2023.GCB_dfco2star/member_01/clusters.nc",
+    "cluster_vars": "['pco2_seaflux_filled' 'temp_oisst_clim' 'medsea' 'mld_soda_clim'\n 'chl_cci_avg']",
+    "data_input_file": "./OSETHv2023.GCB_data_1982-2022.nc",
+    "date": "2023-06-23",
+    "description": "surface dfco2 predicted with a two-step cluster-regression approach",
+    "model_file_names": "../models/v2023.GCB_dfco2star/member_01/lightgbm/model_c**",
+    "n_clusters": 21,
+    "predictors": [
+        "xco2_noaa",
+        "temp_oisst",
+        "temp_clim_oisst_anom",
+        "salt_stacked",
+        "chl_cci_fill_log10",
+        "mld_press_soda_log10",
+        "icec_oisst_diff",
+        "u10_era5",
+        "v10_era5",
+        "ssh_detrend_duacs"
+    ],
+    "source_file": "/net/kryo/work/gregorl/projects/2022-OceanSODA-ETHZ/data/output/v2023.GCB_dfco2star/dfco2star_ensemble_train.nc",
+    "target": "y_dfco2_socat"
+}

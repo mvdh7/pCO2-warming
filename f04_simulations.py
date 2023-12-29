@@ -13,8 +13,29 @@ from takahashi93 import get_alkalinity, dic, tak93, pCO2, temperature
 rng = np.random.default_rng(1)
 opt_total_borate = 1
 
+okc_codes = {
+    1: "Ro93",
+    2: "GP89",
+    3: "DM87-H",
+    4: "DM87-M",
+    5: "DM87-HM",
+    6: "Me73",
+    7: "Me73-P",
+    8: "Mi79",
+    9: "CW98",
+    10: "Lu00",
+    11: "MM02",
+    12: "Mi02",
+    13: "Mi06",
+    14: "Mi10",
+    15: "Wa13",
+    16: "Su20",
+    17: "SB21",
+    18: "Pa18",
+}
+
 # Calculate the precision of Takahashi's pCO2 measurements
-for opt_k_carbonic in [10]:  # range(1, 18):
+for opt_k_carbonic in range(1, 19):
     # opt_k_carbonic=10 gives the least pattern in pCO2_error with temperature,
     # except for maybe 6 (which also has slightly better precision...)
     # T93 note that the Mehrbach constants (4) fit well to the experimental data
@@ -32,18 +53,77 @@ for opt_k_carbonic in [10]:  # range(1, 18):
     pCO2_error = pCO2 - results["pCO2"]
     pCO2_precision = pCO2_error.std()
     # ^ 2.6 µatm for opt_k_carbonic=10; T93 state "precision... approximately ±2 µatm"
-    fig, ax = plt.subplots(dpi=300)
-    ax.scatter(temperature, pCO2_error)
+    fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
+    ax.scatter(temperature, pCO2_error, c="xkcd:navy", edgecolor="none", alpha=0.75)
     ax.axhline(0, c="k", lw=0.8)
     ax.set_xlabel("Temperature / °C")
     ax.set_ylabel("$p$CO$_2$ error / µatm")
-    ax.set_title("opt_k_carbonic = {}".format(opt_k_carbonic))
+    # ax.set_title("opt_k_carbonic = {}".format(opt_k_carbonic))
+    ax.text(
+        0.99,
+        1.03,
+        "$σ$($p$CO$_2$) = {:.1f} µatm".format(pCO2_precision),
+        transform=ax.transAxes,
+        ha="right",
+    )
+    ax.text(
+        0.01,
+        1.03,
+        "opt_k_carbonic = {:.0f} ({})".format(
+            opt_k_carbonic, okc_codes[opt_k_carbonic]
+        ),
+        transform=ax.transAxes,
+        ha="left",
+    )
     fig.tight_layout()
+    fig.savefig("figures/f04/f04_pCO2_error_{:02.0f}.png".format(opt_k_carbonic))
     plt.show()
     plt.close()
 
+# %% Above but all on one plot
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 8 / 2.54))
+ix = np.argsort(temperature)
+for opt_k_carbonic in range(1, 19):
+    # opt_k_carbonic=10 gives the least pattern in pCO2_error with temperature,
+    # except for maybe 6 (which also has slightly better precision...)
+    # T93 note that the Mehrbach constants (4) fit well to the experimental data
+    # (and that Hansson (3/5) and Goyet/Poisson (2) do not)
+    alkalinity, alkalinity_std = get_alkalinity(opt_k_carbonic, opt_total_borate)
+    results = pyco2.sys(
+        par1=alkalinity,
+        par1_type=1,
+        par2=dic,
+        par2_type=2,
+        temperature=temperature,
+        opt_k_carbonic=opt_k_carbonic,
+        **tak93,
+    )
+    pCO2_error = pCO2 - results["pCO2"]
+    pCO2_precision = pCO2_error.std()
+    # ^ 2.6 µatm for opt_k_carbonic=10; T93 state "precision... approximately ±2 µatm"
+    ax.plot(temperature[ix], pCO2_error[ix])
+    # ax.text(0.99, 1.03, "$σ$($p$CO$_2$) = {:.1f} µatm".format(pCO2_precision), transform=ax.transAxes, ha='right')
+ax.axhline(0, c="k", lw=0.8)
+ax.set_xlabel("Temperature / °C")
+ax.set_ylabel("$p$CO$_2$ error / µatm")
+fig.tight_layout()
+
 # %% Simulate the experiment with uncertainties in pCO2 and temperature
-# pCO2_precision = 2  # from study - use value from above instead
+opt_k_carbonic = 10
+alkalinity, alkalinity_std = get_alkalinity(opt_k_carbonic, opt_total_borate)
+results = pyco2.sys(
+    par1=alkalinity,
+    par1_type=1,
+    par2=dic,
+    par2_type=2,
+    temperature=temperature,
+    opt_k_carbonic=opt_k_carbonic,
+    **tak93,
+)
+pCO2_error = pCO2 - results["pCO2"]
+pCO2_precision = pCO2_error.std()
+
+pCO2_precision = 2  # from study - could use value from above instead (i.e., 2.6)
 pCO2_bias = 2  # guessed
 temperature_precision = 0.005  # based on decimal places of reporting, uniform distro
 temperature_bias = 0.005

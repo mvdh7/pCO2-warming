@@ -1,0 +1,14 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "description": "salinity is stacked so that the first listed has highest priority: 1. ESA-CCI salinity (2010-2019), 2. SODAv3.4.2 salinity (1982-2019), 3. EN4.2.1 salinity (2020). ",
+    "en4_info": "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2013JC009067",
+    "esa_cci_info": "https://climate.esa.int/en/projects/sea-surface-salinity/about/",
+    "model_name": "sos",
+    "soda_info": "https://journals.ametsoc.org/view/journals/clim/31/17/jcli-d-18-0149.1.xml",
+    "standard_name": "sea_surface_salinity",
+    "units": "ppt"
+}

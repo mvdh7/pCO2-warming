@@ -1,0 +1,7 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "region"
+    ],
+    "description": "the area of each region based on the \"area\" variable which is taken from SeaFlux v2023",
+    "units": "m2"
+}

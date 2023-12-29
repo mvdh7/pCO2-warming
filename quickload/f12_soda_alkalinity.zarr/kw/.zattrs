@@ -1,0 +1,14 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "description": "Gas transfer velocity using the quadratic parameterisation by Wanninkhof (1992): kw = a * U^2 * Sc660. Where a is the coefficient of gas transfer, U^2 is the wind at 10m squared (at the native resolution of the gridded product output). We use the average of the ERA5, JRA55, and NCEP1 wind products. Sc660 is the Schmidt number normalised  to 660. The NOAA OISST temperature is used to calculate Sc660. a is scaled so that the global kw is 16.5 cm/hr (with 3.2 cm/hr uncertainty which is roughly 20% uncertainty).",
+    "units": "cm/hr",
+    "wind_products": [
+        "ERA5",
+        "JRA55",
+        "NCEP1"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "description": "surface ocean pCO2",
+    "model_name": "spco2",
+    "standard_name": "surface_partial_pressure_of_carbon_dioxide_in_sea_water",
+    "units": "uatm"
+}
