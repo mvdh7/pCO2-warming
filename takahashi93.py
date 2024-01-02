@@ -40,7 +40,7 @@ def get_alkalinity_old(opt_k_carbonic, opt_total_borate):
 
 def get_alkalinity(opt_k_carbonic, opt_total_borate):
     """Determine alkalinity in the experiment as the best-fitting alkalinity to match
-    all the experiment pCO2 points.
+    all the experimental pCO2 points.
     """
 
     def pCO2_from_alkalinity(alkalinity):
