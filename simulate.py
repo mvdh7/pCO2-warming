@@ -146,7 +146,7 @@ ax.fill_betweenx(
     alpha=0.2,
     label="Ta93 $t$ range",
 )
-ax.set_ylabel("$σ$($p$CO$_2$) for ∆t = ${:+}$ °C / %".format(f_dt))
+ax.set_ylabel("$σ$($p$CO$_2$) for ∆$t$ = ${:+}$ °C / %".format(f_dt))
 ax.set_yticks(np.arange(0, 0.3, 0.04))
 ax.set_ylim([0, 0.2])
 
