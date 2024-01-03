@@ -8,27 +8,7 @@ import PyCO2SYS as pyco2
 import numpy as np
 from matplotlib import pyplot as plt
 from takahashi93 import get_alkalinity, dic, tak93, pCO2, temperature
-
-okc_codes = {
-    1: "Ro93",
-    2: "GP89",
-    3: "DM87-H",
-    4: "DM87-M",
-    5: "DM87-HM",
-    6: "Me73",
-    7: "Me73-P",
-    8: "Mi79",
-    9: "CW98",
-    10: "Lu00",
-    11: "MM02",
-    12: "Mi02",
-    13: "Mi06",
-    14: "Mi10",
-    15: "Wa13",
-    16: "Su20",
-    17: "SB21",
-    18: "Pa18",
-}
+import pwtools
 
 for opt_k_carbonic in range(1, 19):
     opt_total_borate = 1
@@ -82,7 +62,7 @@ for opt_k_carbonic in range(1, 19):
     style_poly = dict(label="Ta93 quadratic", alpha=0.9, lw=2.5, ls="--")
     style_pyco2 = dict(
         c="xkcd:coral",
-        label="Theory ({})".format(okc_codes[opt_k_carbonic]),
+        label="Theory ({})".format(pwtools.okc_codes[opt_k_carbonic]),
         alpha=0.9,
         lw=2.5,
         ls=":",
@@ -121,7 +101,7 @@ for opt_k_carbonic in range(1, 19):
     )
     ax.plot(v_temperature, 1e3 * v_results["dlnpCO2_dT"], **style_pyco2)
     ax.set_xlabel("Equilibration temperature / °C")
-    ax.set_ylabel("$η$ / kK$^{–1}$")
+    ax.set_ylabel("$η$ / k°C$^{–1}$")
     ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
 
     # ax = axs[2]

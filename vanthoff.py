@@ -5,7 +5,7 @@ if pyco2path not in path:
     path.append(pyco2path)
 
 import PyCO2SYS as pyco2
-import numpy as np
+from autograd import numpy as np, jacobian
 from matplotlib import pyplot as plt
 
 # Humphreys et al. (2018, Mar. Chem.), Appendix C, equation C.1:
@@ -50,15 +50,32 @@ ef_CO2_aq = -413.196
 ef_H2O = -285.800
 ef_HCO3 = -689.862
 ef_CO3 = -675.160
-ef_H = 0
+ef_H = 0.0
+efs = np.array([ef_CO2_g, ef_CO2_aq, ef_H2O, ef_HCO3, ef_CO3, ef_H])
 
 # Standard enthalpies of reaction
 er_K0 = ef_CO2_aq - ef_CO2_g
 er_K1 = ef_HCO3 + ef_H - (ef_CO2_aq + ef_H2O)
 er_K2 = ef_CO3 + ef_H - ef_HCO3
-
 enthalpy_sum = (er_K2 - er_K0 - er_K1) * 1e3  # J/mol
 print("Enthalpy sum = {:.1f}".format(enthalpy_sum))
+
+
+# For uncertainty propagation into the enthalpy sum
+def get_enthalpy_sum(efs):
+    ef_CO2_g, ef_CO2_aq, ef_H2O, ef_HCO3, ef_CO3, ef_H = efs
+    er_K0 = ef_CO2_aq - ef_CO2_g
+    er_K1 = ef_HCO3 + ef_H - (ef_CO2_aq + ef_H2O)
+    er_K2 = ef_CO3 + ef_H - ef_HCO3
+    return (er_K2 - er_K0 - er_K1) * 1e3
+
+
+ef_uncertainties = np.array([0.015, 0.019, 0.022, 0.039, 0.053, 0])
+ef_jac = jacobian(get_enthalpy_sum)(efs)
+ef_umx = np.diag(ef_uncertainties) ** 2
+enthalpy_sum_uncertainty = np.sqrt(ef_jac @ ef_umx @ ef_jac.T)
+
+
 dlnKfrac_dT = enthalpy_sum / (Rgas * (273.15 + temperature) ** 2)
 
 vanthoff_centre = 0

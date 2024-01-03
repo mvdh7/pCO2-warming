@@ -154,7 +154,7 @@ for i, fxl in enumerate(fxlabels):
 for o in okc_order:
     fxlabels.append(str(o))
 ax.set_xticklabels(fxlabels)
-ax.set_ylabel("Contribution to $η$ / kK$^{–1}$")
+ax.set_ylabel("Contribution to $υ$ / kK$^{–1}$")
 ax.tick_params(top=True, labeltop=False)
 brackets = dict(
     xycoords="data",
@@ -175,5 +175,3 @@ ax.annotate("", xy=(14, anx), xytext=(17, anx), **brackets)
 ax.text(15.5, anx - 6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
 fig.tight_layout()
 fig.savefig("figures/f07_violins_soda.png")
-plt.show()
-plt.close()
