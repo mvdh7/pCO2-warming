@@ -80,7 +80,7 @@ for i, var in enumerate(fvars):
     )
     parts["bodies"][0].set_facecolor("xkcd:dark")
     parts["bodies"][0].set_alpha(0.8)
-okc_order = [4, 10, 11, 13, 14, 15, 17, 6, 7, 12, 16, 1, 2, 3, 5, 9, 8, 18]
+okc_order = [6, 7, 4, 10, 11, 13, 14, 15, 17, 9, 16, 18, 12, 1, 2, 3, 5, 8]
 okc_codes = {
     1: "Ro93",
     2: "GP89",
@@ -154,7 +154,7 @@ for i, fxl in enumerate(fxlabels):
 for o in okc_order:
     fxlabels.append(str(o))
 ax.set_xticklabels(fxlabels)
-ax.set_ylabel("Contribution to $υ$ / kK$^{–1}$")
+ax.set_ylabel("Contribution to $υ$ / k°C$^{–1}$")
 ax.tick_params(top=True, labeltop=False)
 brackets = dict(
     xycoords="data",
@@ -167,11 +167,11 @@ brackets = dict(
     annotation_clip=False,
 )
 anx = -60
-ax.annotate("", xy=(3, anx), xytext=(9, anx), **brackets)
-ax.text(6, anx - 6, '"Mehrbach"', ha="center", va="top", c="xkcd:grey blue")
-ax.annotate("", xy=(10, anx), xytext=(11, anx), **brackets)
-ax.text(10.5, anx - 6, "GEOSECS", ha="center", va="top", c="xkcd:grey blue")
-ax.annotate("", xy=(14, anx), xytext=(17, anx), **brackets)
-ax.text(15.5, anx - 6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
+ax.annotate("", xy=(5, anx), xytext=(12, anx), **brackets)
+ax.text(8.5, anx - 6, '"Mehrbach"', ha="center", va="top", c="xkcd:grey blue")
+ax.annotate("", xy=(3, anx), xytext=(4, anx), **brackets)
+ax.text(3.5, anx - 6, "GEOSECS", ha="center", va="top", c="xkcd:grey blue")
+ax.annotate("", xy=(16, anx), xytext=(19, anx), **brackets)
+ax.text(17.5, anx - 6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
 fig.tight_layout()
 fig.savefig("figures/f07_violins_soda.png")
