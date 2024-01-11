@@ -23,7 +23,8 @@ alkalinity_10 = t93.get_alkalinity(10, opt_total_borate)[0]
 alkalinity_08 = t93.get_alkalinity(8, opt_total_borate)[0]
 
 # Calculate pCO2 variation with temperature with different approaches
-v_temperature = np.linspace(-1.8, 30, num=100)
+# v_temperature = np.linspace(-1.8, 30, num=100)
+v_temperature = np.linspace(-1.8, 35.83, num=100)
 # - with PyCO2SYS (autograd approach)
 v_results_10 = pyco2.sys(
     par1=alkalinity_10,
@@ -62,26 +63,28 @@ v_lnpCO2_poly = (
 f_linear = np.exp(v_temperature * lr_slope + lr_intercept)
 
 # Visualise similar to Takahashi et al. (1993) Figure A1
-style_linear = dict(c="xkcd:dark", label="Ta93 linear", alpha=0.9, lw=1.5)
+style_linear = dict(c="xkcd:dark", label="$υ_l$ (Ta93, linear)", alpha=0.9, lw=1.5)
 style_poly = dict(
-    c="xkcd:dark", label="Ta93 quadratic", alpha=0.8, lw=2, ls="--", zorder=2
+    c="xkcd:dark", label="$υ_q$ (Ta93, quadratic)", alpha=0.8, lw=2, ls="--", zorder=2
 )
 style_vh = dict(
-    c="xkcd:bluish", label="van 't Hoff (fitted)", alpha=0.8, lw=1.5, zorder=1
+    c="xkcd:bluish", label="$υ_h$ (van 't Hoff, fitted)", alpha=0.8, lw=1.5, zorder=1
 )
 style_pyco2_10 = dict(
     c="xkcd:strawberry",
-    label="PyCO2SYS ({})".format(pwtools.okc_codes[10]),
+    label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, Lu00)",
     alpha=0.8,
     lw=2,
     ls=(2, (2,)),
     zorder=3,
 )
 style_vht = style_vh.copy()
-style_vht.update(dict(ls=(0, (3, 1, 1, 1)), label="van 't Hoff (approx.)"), lw=2)
+style_vht.update(
+    dict(ls=(0, (3, 1, 1, 1)), label="$υ_x$ (van 't Hoff, ∆$_rH^⦵$)"), lw=2
+)
 style_pyco2_08 = dict(
     c="xkcd:strawberry",
-    label="PyCO2SYS ({})".format(pwtools.okc_codes[8]),
+    label=r"$υ_\mathrm{Mi79}$ (PyCO2SYS, Mi79)",
     alpha=0.8,
     lw=2,
     ls=":",
@@ -143,9 +146,9 @@ ax.plot(
     **style_pyco2_08,
 )
 ax.set_xlabel("Temperature / °C")
-ax.set_ylabel("($p$CO$_2$ $-$ Ta93 linear) / µatm")
+ax.set_ylabel("[$p$CO$_2$ $-$ $p$CO$_2$($υ_l$)] / µatm")
 ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
-ax.set_ylim((-23, 23))
+ax.set_ylim((-43, 23))
 
 ax = axs[1]
 ax.text(0, 1.05, "(b)", transform=ax.transAxes)
@@ -172,7 +175,9 @@ ax.set_ylabel("$υ$ / k°C$^{–1}$")
 ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
 ax.set_ylim([30, 50])
 
-ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.3), edgecolor="k", ncol=2)
+ax.legend(
+    loc="upper center", bbox_to_anchor=(0.5, -0.3), edgecolor="k", ncol=2, fontsize=9
+)
 
 fig.tight_layout()
 fig.savefig("figures/f01/f01c_final.png")

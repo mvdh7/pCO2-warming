@@ -174,7 +174,7 @@ fm = (soda["seasonal_range"] * 1e3).plot(
 plt.colorbar(
     fm,
     location="bottom",
-    label="Seasonal range in $η$ / kK$^{–1}$",
+    label=r"Seasonal range in $υ_\mathrm{Lu00}$ / k°C$^{–1}$",
     pad=0.05,
     aspect=20,
     fraction=0.05,
@@ -197,7 +197,7 @@ fm = (soda["trend"] * 1e3 * 365.25).plot(
 plt.colorbar(
     fm,
     location="bottom",
-    label="Trend in $η$ / kK$^{–1}$ yr$^{-1}$",
+    label=r"Trend in $υ_\mathrm{Lu00}$ / k°C$^{–1}$ yr$^{-1}$",
     pad=0.05,
     aspect=20,
     fraction=0.05,
