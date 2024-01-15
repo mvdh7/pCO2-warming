@@ -10,8 +10,7 @@ from cartopy import crs as ccrs, feature as cfeature
 import xarray as xr
 import numpy as np
 from scipy.stats import linregress
-
-# from scipy.optimize import least_squares
+from scipy.optimize import least_squares
 import pwtools
 
 # opt_k_carbonic = 10
@@ -50,6 +49,10 @@ for opt_k_carbonic in [10]:  # range(1, 19):
         ("lat", "lon"),
         results["dlnpCO2_dT"] * 1e3,
     )
+    soda["pCO2_{:02.0f}".format(opt_k_carbonic)] = (
+        ("lat", "lon"),
+        results["pCO2"],
+    )
 
     # Fit b_h across the globe
     fit_bh = np.full(
@@ -86,6 +89,89 @@ for opt_k_carbonic in [10]:  # range(1, 19):
 
 # # %% Quick load
 # soda = xr.open_dataset("quickload/f06_soda.zarr", engine="zarr")
+
+
+# %% Predict bh
+def get_bh(coeffs, temperature, salinity, pCO2):
+    c, t, tt, s, ss, p, pp, ts, tp, sp = coeffs
+    return (
+        c
+        + t * temperature
+        + tt * temperature**2
+        + s * salinity
+        + ss * salinity**2
+        + p * pCO2
+        + pp * pCO2**2
+        + ts * temperature * salinity
+        + tp * temperature * pCO2
+        + sp * salinity * pCO2
+    )
+
+
+def _lsqfun_get_bh(coeffs, temperature, salinity, pCO2, bh):
+    return get_bh(coeffs, temperature, salinity, pCO2) - bh
+
+
+temperature = soda.temperature.mean("time").to_numpy().ravel().astype(float)
+salinity = soda.salinity.mean("time").to_numpy().ravel().astype(float)
+pCO2 = soda.pCO2_10.to_numpy().ravel()
+bh = soda.bh_10.to_numpy().ravel()
+L = (
+    ~np.isnan(temperature)
+    & ~np.isnan(pCO2)
+    & ~np.isnan(bh)
+    & ~np.isnan(salinity)
+    # & (salinity > 15)
+)
+temperature, pCO2, bh, salinity = temperature[L], pCO2[L], bh[L], salinity[L]
+lon, lat = np.meshgrid(soda.lon.data, soda.lat.data)
+lon = lon.ravel()[L]
+lat = lat.ravel()[L]
+optr = least_squares(
+    _lsqfun_get_bh,
+    [30000, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    args=(temperature, salinity, pCO2, bh),
+    method="lm",
+)
+bh_pred = get_bh(optr["x"], temperature, salinity, pCO2)
+
+optr_x = np.array(
+    [
+        3.29346944e04,
+        1.64051754e02,
+        -1.19736777e00,
+        -5.63073675e01,
+        -8.85674870e-01,
+        -2.24987770e01,
+        -3.48315855e-03,
+        -3.66862524e00,
+        1.57507242e-01,
+        5.37574317e-01,
+    ]
+)
+
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    bh,
+    bh_pred,
+    c=lat,
+    edgecolor="none",
+    alpha=0.2,
+    s=10,
+)
+ax.axline((29100, 29100), slope=1, c="xkcd:strawberry")
+ax.set_aspect(1)
+
+# %%
+fig, ax = plt.subplots(dpi=300)
+fsc = ax.scatter(
+    lon, lat, c=bh - bh_pred, s=2, edgecolor="none", cmap="RdBu_r", vmin=-500, vmax=500
+)
+plt.colorbar(fsc)
+
+# %%
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(temperature, bh - bh_pred)
 
 # %% Visualise - map
 all_polyfits = []
