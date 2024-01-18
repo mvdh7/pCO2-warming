@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import least_squares
+from scipy import stats
 from matplotlib import pyplot as plt
 import pwtools
 
@@ -24,6 +25,14 @@ wkf["fCO2_uw"] = wkf.fCO2_uw.astype(float)
 # Calculate fraction
 wkf["fr_fCO2"] = wkf.fCO2_uw / wkf.fCO2_d20
 wkf["temperature_diff"] = wkf.temperature - 20
+
+# Get W22 cutoff
+L = wkf.temperature_diff.notnull() & wkf.fr_fCO2.notnull()
+lr = stats.linregress(wkf.temperature_diff[L], np.log(wkf.fr_fCO2[L]))
+wkf["ln_fr_fCO2_linear_fit_diff"] = np.log(wkf.fr_fCO2) - (
+    lr.slope * wkf.temperature_diff + lr.intercept
+    )
+wkf_cutoff = wkf.ln_fr_fCO2_linear_fit_diff.std() * 2
 
 # Get bins
 fstep = 2
@@ -138,25 +147,49 @@ ax.scatter("temperature_diff", "fCO2_bh_fitted_diff", data=wkf, s=20, edgecolor=
 ax.set_ylim((-50, 50))
 ax.axhline(0, c="k", lw=0.8)
 
+#%%    
+def std_Sn(a):
+    # https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/diffsn.htm
+    #
+    # Peter J. Rousseuw and Christophe Croux (1993), "Alternatives to the Median
+    # Absolute Deviation," Journal of the American Statistical Association, Vol. 88,
+    # No. 424, pp. 1273-1283.
+    a = a[~np.isnan(a)].ravel()
+    sn0 = np.full((np.size(a), np.size(a)), np.nan)
+    for i in range(len(a)):
+        sn0[i] = np.abs(a[i] - a)
+    np.fill_diagonal(sn0, np.nan)
+    sn1 = np.nanmedian(sn0, axis=1)
+    sn = 1.1926 * np.median(sn1)
+    return sn
+
 # %% Visualise another way
-fstep = 1.5
-fx = np.arange(-25.0, 15, fstep)
-fy_h = np.full(fx.size - 1, np.nan)
-fy_hf = np.full(fx.size - 1, np.nan)
-fy_l = np.full(fx.size - 1, np.nan)
-fy_sum = np.full(fx.size - 1, 0)
-for i in range(len(fx) - 1):
+fwindow = 4
+fx = np.linspace(np.min(wkf.temperature_diff) + 0.1, np.max(wkf.temperature_diff) - 0.1, num=200)
+fy_h = np.full(fx.size, np.nan)
+fy_hf = np.full(fx.size, np.nan)
+fy_l = np.full(fx.size, np.nan)
+ttp_h = np.full(fx.size, np.nan)
+ttp_hf = np.full(fx.size, np.nan)
+ttp_l = np.full(fx.size, np.nan)
+fy_sum = np.full(fx.size, 0)
+for i in range(len(fx)):
     L = (
-        (wkf.temperature_diff >= fx[i])
-        & (wkf.temperature_diff < fx[i + 1])
-        & (wkf.fCO2_h_diff.notnull())
+        (wkf.temperature_diff > fx[i] - fwindow)
+        & (wkf.temperature_diff < fx[i] + fwindow)
+        & wkf.fCO2_h_diff.notnull()
+        & wkf.fCO2_bh_fitted_diff.notnull()
+        & wkf.fCO2_l_diff.notnull()
+        & (wkf.fCO2_bh_fitted_diff.abs() < 25)
+        # & (wkf.ln_fr_fCO2_linear_fit_diff <= wkf_cutoff)
     )
-    if L.sum() > 3:
-        fy_h[i] = wkf.fCO2_h_diff[L].median()
-        fy_hf[i] = wkf.fCO2_bh_fitted_diff[L].median()
-        fy_l[i] = wkf.fCO2_l_diff[L].median()
+    ttp_h[i] = stats.ttest_1samp(wkf.fCO2_h_diff[L], popmean=0).pvalue
+    ttp_hf[i] = stats.ttest_1samp(wkf.fCO2_bh_fitted_diff[L], popmean=0).pvalue
+    ttp_l[i] = stats.ttest_1samp(wkf.fCO2_l_diff[L], popmean=0).pvalue
+    fy_h[i] = wkf.fCO2_h_diff[L].mean()
+    fy_hf[i] = wkf.fCO2_bh_fitted_diff[L].mean()
+    fy_l[i] = wkf.fCO2_l_diff[L].mean()
     fy_sum[i] = L.sum()
-fxp = fx[:-1] + fstep / 2
 
 fig, ax = plt.subplots(dpi=300)
 ax.scatter(
@@ -164,11 +197,11 @@ ax.scatter(
     # "fCO2_h_diff",
     "fCO2_bh_fitted_diff",
     data=wkf,
-    s=20,
+    s=10,
     edgecolor="none",
-    # c="xkcd:navy",
-    c=wkf.ta_dic,
-    alpha=0.5,
+    c="xkcd:dark",
+    # c=wkf.ta_dic,
+    alpha=0.25,
 )
 # ax.scatter(
 #     "temperature_diff",
@@ -179,8 +212,40 @@ ax.scatter(
 #     c="xkcd:strawberry",
 #     alpha=0.2,
 # )
-ax.plot(fxp, fy_h, c="xkcd:navy")
-ax.plot(fxp, fy_l, c="xkcd:strawberry")
-ax.plot(fxp, fy_hf, c="xkcd:brown")
-ax.axhline(0, c="k", lw=0.8)
-ax.set_ylim([-25, 25])
+
+confidence = 99  # percent confidence that we can reject the null hypothesis.
+# The null hypothesis is that the mean of the data is zero.
+confidence_fr = 1 - confidence / 100
+
+fy_hf_zero = fy_hf.copy()
+fy_hf_zero[ttp_hf <= confidence_fr] = np.nan
+fy_hf_nonzero = fy_hf.copy()
+fy_hf_nonzero[ttp_hf > confidence_fr] = np.nan
+ax.plot(fx, fy_hf_zero, c="xkcd:tangerine", lw=2)
+ax.plot(fx, fy_hf_nonzero, c="xkcd:tangerine", lw=2, dashes=(2, 1.2))
+
+fy_h_zero = fy_h.copy()
+fy_h_zero[ttp_h <= confidence_fr] = np.nan
+fy_h_nonzero = fy_h.copy()
+fy_h_nonzero[ttp_h > confidence_fr] = np.nan
+ax.plot(fx, fy_h_zero, c="xkcd:azure", lw=2)
+ax.plot(fx, fy_h_nonzero, c="xkcd:azure", lw=2, dashes=(2, 1.2))
+
+fy_l_zero = fy_l.copy()
+fy_l_zero[ttp_l <= confidence_fr] = np.nan
+fy_l_nonzero = fy_l.copy()
+fy_l_nonzero[ttp_l > confidence_fr] = np.nan
+ax.plot(fx, fy_l_zero, c="xkcd:strawberry", lw=2)
+ax.plot(fx, fy_l_nonzero, c="xkcd:strawberry", lw=2, dashes=(2, 1.2))
+
+ax.axhline(0, c="k", lw=0.8, zorder=-1)
+ax.set_ylim([-15, 15])
+ax.set_xticks(np.arange(-20, 15, 5))
+ax.set_xlim([-21, 12])
+ax.set_xlabel("∆$t$ / °C")
+ax.tick_params(top=True, labeltop=False)
+for t in np.arange(0, 35, 5):
+    ax.text(t - 20, 16, "{}".format(t), ha='center', va='bottom')
+ax.text(0.5, 1.11, "$t_1$ / °C", ha='center', va='bottom', transform=ax.transAxes)
+ax.grid(alpha=0.2)
+ax.set_ylabel("[$p$CO$_2$($t_1$) – $p$CO$_2$(20 °C)] / µatm")
