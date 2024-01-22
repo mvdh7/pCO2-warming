@@ -60,3 +60,18 @@ def get_alkalinity(opt_k_carbonic, opt_total_borate):
 
     opt_result = least_squares(_lsqfun_pCO2_from_alkalinity, [2300], args=(pCO2,))
     return opt_result["x"][0], np.sqrt(np.mean(opt_result.fun**2))
+
+
+def get_fCO2(opt_k_carbonic, opt_total_borate):
+    """Convert pCO2 to fCO2 for the given `opt_k_carbonic` and `opt_total_borate`."""
+    fCO2 = pyco2.sys(
+        par1=dic,
+        par1_type=2,
+        par2=pCO2,
+        par2_type=4,
+        temperature=temperature,
+        opt_k_carbonic=opt_k_carbonic,
+        opt_total_borate=opt_total_borate,
+        **tak93,
+    )["fCO2"]
+    return fCO2

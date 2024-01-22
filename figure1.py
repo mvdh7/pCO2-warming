@@ -12,19 +12,22 @@ import takahashi93 as t93
 import pwtools
 
 # Do own "linear regression" (forced to T93 slope) and quadratic fit
-lr = linregress(t93.temperature, np.log(t93.pCO2))  # slope comes out as 42.2 not 42.3!
+fCO2 = t93.get_fCO2(10, 1)
+lr_pCO2 = linregress(
+    t93.temperature, np.log(t93.pCO2)
+)  # slope comes out as 42.2 not 42.3!
+lr_fCO2 = linregress(t93.temperature, np.log(fCO2))  # slope comes out as 42.2 not 42.3!
 lr_slope = 42.3e-3
-lr_intercept = np.mean(np.log(t93.pCO2) - t93.temperature * lr_slope)
-pf = np.polyfit(t93.temperature, np.log(t93.pCO2), 2)
+lr_intercept = np.mean(np.log(fCO2) - t93.temperature * lr_slope)
 
 # %%
 opt_total_borate = 1
 alkalinity_10 = t93.get_alkalinity(10, opt_total_borate)[0]
 alkalinity_08 = t93.get_alkalinity(8, opt_total_borate)[0]
 
-# Calculate pCO2 variation with temperature with different approaches
-# v_temperature = np.linspace(-1.8, 30, num=100)
+# Calculate fCO2 variation with temperature with different approaches
 v_temperature = np.linspace(-1.8, 35.83, num=100)
+
 # - with PyCO2SYS (autograd approach)
 v_results_10 = pyco2.sys(
     par1=alkalinity_10,
@@ -35,8 +38,8 @@ v_results_10 = pyco2.sys(
     opt_k_carbonic=10,
     **t93.tak93,
 )
-v_pCO2_10 = v_results_10["pCO2"]
-v_lnpCO2_PyCO2SYS_10 = np.log(v_pCO2_10)
+v_fCO2_10 = v_results_10["fCO2"]
+v_lnfCO2_PyCO2SYS_10 = np.log(v_fCO2_10)
 v_results_08 = pyco2.sys(
     par1=alkalinity_08,
     par1_type=1,
@@ -46,17 +49,19 @@ v_results_08 = pyco2.sys(
     opt_k_carbonic=8,
     **t93.tak93,
 )
-v_pCO2_08 = v_results_08["pCO2"]
-v_lnpCO2_PyCO2SYS_08 = np.log(v_pCO2_08)
+v_fCO2_08 = v_results_08["fCO2"]
+v_lnfCO2_PyCO2SYS_08 = np.log(v_fCO2_08)
+
 # - with the linear temperature sensitivity of T93
-zero_lnpCO2 = np.log(t93.pCO2) - 0.0423 * t93.temperature
-v_lnpCO2_linear = np.mean(zero_lnpCO2) + v_temperature * 0.0423
+zero_lnfCO2 = np.log(fCO2) - 0.0423 * t93.temperature
+v_lnfCO2_linear = np.mean(zero_lnfCO2) + v_temperature * 0.0423
+
 # - with the polynomial temperature sensitivity of T93
-zero_lnpCO2_poly = (
-    np.log(t93.pCO2) - 0.0433 * t93.temperature + 0.5 * 8.7e-5 * t93.temperature**2
+zero_lnfCO2_poly = (
+    np.log(fCO2) - 0.0433 * t93.temperature + 0.5 * 8.7e-5 * t93.temperature**2
 )
-v_lnpCO2_poly = (
-    np.mean(zero_lnpCO2_poly)
+v_lnfCO2_poly = (
+    np.mean(zero_lnfCO2_poly)
     + v_temperature * 0.0433
     - 0.5 * 8.7e-5 * v_temperature**2
 )
@@ -96,16 +101,14 @@ ax = axs[0]
 ax.text(0, 1.05, "(a)", transform=ax.transAxes)
 ax.errorbar(
     t93.temperature,
-    # np.log(pCO2),
-    t93.pCO2 - np.exp(t93.temperature * lr_slope + lr_intercept),
+    fCO2 - np.exp(t93.temperature * lr_slope + lr_intercept),
     np.sqrt(8),
     c="xkcd:dark",
     ls="none",
 )
 ax.scatter(
     t93.temperature,
-    # np.log(pCO2),
-    t93.pCO2 - np.exp(t93.temperature * lr_slope + lr_intercept),
+    fCO2 - np.exp(t93.temperature * lr_slope + lr_intercept),
     c="xkcd:dark",
     label="Ta93 measured",
     s=50,
@@ -116,16 +119,12 @@ ax.scatter(
 ax.axhline(0, **style_linear)
 ax.plot(
     v_temperature,
-    np.exp(v_lnpCO2_poly) - f_linear,
+    np.exp(v_lnfCO2_poly) - f_linear,
     **style_poly,
 )
 ax.plot(
     v_temperature,
-    np.exp(
-        pwtools.get_lnfCO2_vh(
-            [pwtools.bh_best_pCO2, pwtools.ch_best_pCO2], v_temperature
-        )
-    )
+    np.exp(pwtools.get_lnfCO2_vh([pwtools.bh_best, pwtools.ch_best], v_temperature))
     - f_linear,
     **style_vh,
 )
@@ -133,7 +132,7 @@ ax.plot(
     v_temperature,
     np.exp(
         pwtools.get_lnfCO2_vh(
-            [pwtools.bh_theory, pwtools.ch_theory_best_pCO2], v_temperature
+            [pwtools.bh_theory, pwtools.ch_theory_best], v_temperature
         )
     )
     - f_linear,
@@ -141,16 +140,20 @@ ax.plot(
 )
 ax.plot(
     v_temperature,
-    np.exp(v_lnpCO2_PyCO2SYS_10) - f_linear,
+    np.exp(v_lnfCO2_PyCO2SYS_10) - f_linear,
     **style_pyco2_10,
 )
 ax.plot(
     v_temperature,
-    np.exp(v_lnpCO2_PyCO2SYS_08) - f_linear,
+    np.exp(v_lnfCO2_PyCO2SYS_08) - f_linear,
     **style_pyco2_08,
 )
 ax.set_xlabel("Temperature / °C")
-ax.set_ylabel("[$p$CO$_2$ $-$ $p$CO$_2$($υ_l$)] / µatm")
+ax.set_ylabel(
+    "[{sp}{f}CO$_2$ $-$ {f}CO$_2$($υ_l$)] / µatm".format(
+        sp=pwtools.thinspace, f=pwtools.f
+    )
+)
 ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
 ax.set_ylim((-43, 23))
 
@@ -162,7 +165,7 @@ ax.plot(
     1e3 * pwtools.get_eta_h(pwtools.bh_theory, v_temperature),
     **style_vht,
 )
-ax.plot(v_temperature, 1e3 * v_results_08["dlnpCO2_dT"], **style_pyco2_08)
+ax.plot(v_temperature, 1e3 * v_results_08["dlnfCO2_dT"], **style_pyco2_08)
 ax.plot(
     v_temperature,
     1e3 * (0.0433 - 8.7e-5 * v_temperature),
@@ -170,10 +173,10 @@ ax.plot(
 )
 ax.plot(
     v_temperature,
-    1e3 * pwtools.get_eta_h(pwtools.bh_best_pCO2, v_temperature),
+    1e3 * pwtools.get_eta_h(pwtools.bh_best, v_temperature),
     **style_vh,
 )
-ax.plot(v_temperature, 1e3 * v_results_10["dlnpCO2_dT"], **style_pyco2_10)
+ax.plot(v_temperature, 1e3 * v_results_10["dlnfCO2_dT"], **style_pyco2_10)
 ax.set_xlabel("Temperature / °C")
 ax.set_ylabel("$υ$ / k°C$^{–1}$")
 ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
@@ -184,4 +187,4 @@ ax.legend(
 )
 
 fig.tight_layout()
-fig.savefig("figures/f01/f01c_final.png")
+fig.savefig("figures_final/figure1.png")

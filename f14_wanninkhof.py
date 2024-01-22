@@ -270,6 +270,6 @@ for t in np.arange(0, 35, 5):
     ax.text(t - 20, 13, "{}".format(t), ha="center", va="bottom")
 ax.text(0.5, 1.11, "$t_1$ / °C", ha="center", va="bottom", transform=ax.transAxes)
 ax.grid(alpha=0.2)
-ax.set_ylabel("[$p$CO$_2$($t_1$) – $p$CO$_2$(20 °C)] / µatm")
+ax.set_ylabel("[" + pwtools.thinspace + "$ƒ$CO$_2$($t_1$) – $ƒ$CO$_2$(20 °C)] / µatm")
 fig.tight_layout()
 fig.savefig("figures/f14_wanninkhof.png")

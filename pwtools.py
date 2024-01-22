@@ -1,5 +1,5 @@
 from autograd import grad, jacobian
-from scipy.optimize import least_squares
+from scipy.optimize import least_squares, curve_fit
 import numpy as np
 
 Rgas = 8.31446261815324
@@ -25,10 +25,16 @@ okc_codes = {
     18: "Pa18",
 }
 
-bh_best = 28963  # J/mol
-ch_best = 18.2321
+bh_best = 28995  # J/mol
+ch_best = 18.2420
+bh_best_pCO2 = 28963  # J/mol
+ch_best_pCO2 = 18.2321
 bh_theory = 25288  # J/mol
-ch_theory_best = 16.713
+ch_theory_best = 16.709
+ch_theory_best_pCO2 = 16.713
+
+thinspace = " "
+f = "$ƒ$" + thinspace
 
 
 def get_eta_l(bl):
@@ -129,27 +135,37 @@ def get_grad_H_h(bh, t0, t1):
     return grad(get_H_h)(bh, t0, t1)
 
 
-def get_lnpCO2_vh(coeffs, temperature):
+def get_lnfCO2_vh(coeffs, temperature):
     b, c = coeffs
     return c - b / (Rgas * (temperature + tzero))
 
 
-def _lsqfun_get_pCO2_vh(coeffs, temperature, ln_pCO2):
-    return np.exp(get_lnpCO2_vh(coeffs, temperature)) - np.exp(ln_pCO2)
-    # return get_lnpCO2_vh(coeffs, temperature) - ln_pCO2
+def _lsqfun_get_lnfCO2_vh(coeffs, temperature, ln_fCO2):
+    return np.exp(get_lnfCO2_vh(coeffs, temperature)) - np.exp(ln_fCO2)
+    # return get_lnfCO2_vh(coeffs, temperature) - ln_fCO2
 
 
-def fit_pCO2_vh(temperature, ln_pCO2):
-    return least_squares(_lsqfun_get_pCO2_vh, [25288, 20], args=(temperature, ln_pCO2))
+def fit_fCO2_vh(temperature, ln_fCO2):
+    return least_squares(
+        _lsqfun_get_lnfCO2_vh, [25288, 20], args=(temperature, ln_fCO2)
+    )
 
 
-def get_lnpCO2_vht(c, temperature):
+def _curfun_fit_vh(temperature, bh, ch):
+    return np.exp(get_lnfCO2_vh((bh, ch), temperature))
+
+
+def fit_vh_curve(temperature, fCO2):
+    return curve_fit(_curfun_fit_vh, temperature, fCO2, p0=(25288, 20))
+
+
+def get_lnfCO2_vht(c, temperature):
     return c - bh_theory / (Rgas * (temperature + tzero))
 
 
-def _lsqfun_get_pCO2_vht(c, temperature, ln_pCO2):
-    return np.exp(get_lnpCO2_vht(c, temperature)) - np.exp(ln_pCO2)
+def _lsqfun_get_fCO2_vht(c, temperature, ln_fCO2):
+    return np.exp(get_lnfCO2_vht(c, temperature)) - np.exp(ln_fCO2)
 
 
-def fit_pCO2_vht(temperature, ln_pCO2):
-    return least_squares(_lsqfun_get_pCO2_vht, [20], args=(temperature, ln_pCO2))
+def fit_fCO2_vht(temperature, ln_fCO2):
+    return least_squares(_lsqfun_get_fCO2_vht, [20], args=(temperature, ln_fCO2))
