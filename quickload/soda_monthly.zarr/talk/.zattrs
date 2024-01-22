@@ -1,0 +1,29 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "month",
+        "lat",
+        "lon"
+    ],
+    "author": "Luke Gregor",
+    "cluster_input_file": "../models/v2023.GCB_talk/member_01/clusters.nc",
+    "cluster_vars": "['talk_glodap' 'medsea' 'salt_stacked_clim' 'temp_oisst_clim' 'nstar_woa']",
+    "clustering_model": "K-means",
+    "data_input_file": "./OSETHv2023.GCB_data_1982-2022.nc",
+    "date": "2023-06-23",
+    "description": "Total alkalinity estimated with an ensemble of SVR models (scikit-learn)",
+    "model_file_names": "../models/v2023.GCB_talk/member_01/svr/model_c**",
+    "model_name": "talkos",
+    "n_clusters": 12,
+    "predictors": [
+        "temp_oisst",
+        "salt_stacked",
+        "silicate_woa",
+        "nitrate_star_woa",
+        "ssh_detrend_duacs"
+    ],
+    "regression_model": "Support Vector Regression",
+    "source_file": "/net/kryo/work/gregorl/projects/2022-OceanSODA-ETHZ/data/output/v2023.GCB_talk/talk_ensemble_train.nc",
+    "standard_name": "total_alkalinity_in_sea_water",
+    "target": "talk_glodap (8 members) + talk_norm_glodap (8 members)",
+    "units": "umol/kg"
+}

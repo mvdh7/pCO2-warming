@@ -1,0 +1,8 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "month",
+        "lat",
+        "lon",
+        "ex_temperature"
+    ]
+}

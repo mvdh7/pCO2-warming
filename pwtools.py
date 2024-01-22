@@ -38,59 +38,59 @@ f = "$ƒ$" + thinspace
 
 
 def get_eta_l(bl):
-    """Calculate linear η with manuscript equation (8)."""
+    """Calculate linear υ with manuscript equation (8)."""
     return bl * 1
 
 
 def get_eta_q(aq_bq, t):
-    """Calculate quadratic η with manuscript equation (9)."""
+    """Calculate quadratic υ with manuscript equation (9)."""
     aq, bq = aq_bq
     return 2 * aq * t + bq
 
 
 def get_eta_h(bh, t):
-    """Calculate van 't Hoff η with manuscript equation (10)."""
+    """Calculate van 't Hoff υ with manuscript equation (10)."""
     return bh / (Rgas * (t + tzero) ** 2)
 
 
 def get_H_l(bl, t0, t1):
-    """Calculate linear H with manuscript equation (11)."""
+    """Calculate linear Υ with manuscript equation (11)."""
     return bl * (t1 - t0)
 
 
 def get_H_q(aq_bq, t0, t1):
-    """Calculate quadratic H with manuscript equation (12)."""
+    """Calculate quadratic Υ with manuscript equation (12)."""
     aq, bq = aq_bq
     return aq * (t1**2 - t0**2) + bq * (t1 - t0)
 
 
 def get_H_h(bh, t0, t1):
-    """Calculate van 't Hoff H with manuscript equation (13)."""
+    """Calculate van 't Hoff Υ with manuscript equation (13)."""
     return (1 / (t0 + tzero) - 1 / (t1 + tzero)) * bh / Rgas
 
 
 def get_var_eta_l(var_bl):
-    """Calculate variance in linear η with manuscript equation (14)."""
+    """Calculate variance in linear υ with manuscript equation (14)."""
     return var_bl * 1
 
 
 def get_var_H_l(var_bl, t0, t1):
-    """Calculate variance in linear H with manuscript equation (15)."""
+    """Calculate variance in linear Υ with manuscript equation (15)."""
     return var_bl * (t1 - t0) ** 2
 
 
 def get_var_eta_h(var_bh, t):
-    """Calculate variance in van 't Hoff η with manuscript equation (16)."""
+    """Calculate variance in van 't Hoff υ with manuscript equation (16)."""
     return var_bh / (Rgas * (t + tzero) ** 2) ** 2
 
 
 def get_var_H_h(var_bh, t0, t1):
-    """Calculate variance in van 't Hoff H with manuscript equation (17)."""
+    """Calculate variance in van 't Hoff Υ with manuscript equation (17)."""
     return (1 / (t0 + tzero) - 1 / (t1 + tzero)) ** 2 * var_bh / Rgas**2
 
 
 def get_var_eta_q(cov_q_ab, t):
-    """Calculate variance in quadratic η with manuscript equation (22)."""
+    """Calculate variance in quadratic υ with manuscript equation (22)."""
     var_aq = cov_q_ab[0, 0]
     var_bq = cov_q_ab[1, 1]
     cov_ab = cov_q_ab[0, 1]
@@ -99,7 +99,7 @@ def get_var_eta_q(cov_q_ab, t):
 
 
 def get_var_H_q(cov_q_ab, t0, t1):
-    """Calculate variance in quadratic H with manuscript equation (23)."""
+    """Calculate variance in quadratic Υ with manuscript equation (23)."""
     var_aq = cov_q_ab[0, 0]
     var_bq = cov_q_ab[1, 1]
     cov_ab = cov_q_ab[0, 1]
