@@ -85,7 +85,7 @@ else:
     soda_monthly = xr.open_dataset("quickload/soda_monthly.zarr", engine="zarr")
 
 
-# %%
+# %% Make the parameterisation
 def get_bh(t_s_fCO2, c, t, tt, s, ss, f, ff, ts, tf, sf):
     temperature, salinity, fCO2 = t_s_fCO2
     return (
@@ -106,7 +106,7 @@ def get_bh(t_s_fCO2, c, t, tt, s, ss, f, ff, ts, tf, sf):
 temperature = soda_monthly.temperature.data.ravel().astype(float)
 salinity = soda_monthly.salinity.data.ravel().astype(float)
 fCO2 = soda_monthly.fCO2.data.ravel()
-bh = soda.bh.data.ravel()
+bh = soda_monthly.bh.data.ravel()
 L = ~np.isnan(temperature) & ~np.isnan(salinity) & ~np.isnan(fCO2) & ~np.isnan(bh)
 temperature, salinity, fCO2, bh = temperature[L], salinity[L], fCO2[L], bh[L]
 t_s_fCO2 = np.array([temperature, salinity, fCO2])
@@ -116,16 +116,16 @@ bh_fit = curve_fit(get_bh, t_s_fCO2, bh, p0=(30000, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 bh_coeffs = bh_fit[0]
 # bh_coeffs = np.array(
 #     [
-#         3.04922833e04,
-#         1.28284037e02,
-#         -1.16283855e00,
-#         2.19427895e01,
-#         -7.59989816e-01,
-#         -1.44685166e01,
-#         -4.61544927e-04,
-#         -2.61544492e00,
-#         1.53786868e-01,
-#         2.42207318e-01,
+#         3.13184463e04,
+#         1.39487529e02,
+#         -1.21087624e00,
+#         -4.22484243e00,
+#         -6.52212406e-01,
+#         -1.69522191e01,
+#         -5.47585838e-04,
+#         -3.02071783e00,
+#         1.66972942e-01,
+#         3.09654019e-01,
 #     ]
 # )
 bh_predicted = get_bh(t_s_fCO2, *bh_coeffs)
@@ -139,19 +139,20 @@ fig, ax = plt.subplots(dpi=300)
 ax.scatter(
     bh * 1e-3,
     bh_predicted * 1e-3,
-    c="xkcd:steel",
+    c="xkcd:dark",
     edgecolor="none",
-    alpha=0.3,
+    alpha=0.05,
     s=10,
 )
 ax.axline((29, 29), slope=1, c="xkcd:dark", lw=1.2)
-axlims = (25.2, 30.4)
+axlims = (24.9, 30.8)
 ax.set_xlim(axlims)
 ax.set_ylim(axlims)
 ax.set_aspect(1)
 ax.set_xlabel("$b_h$ fitted to OceanSODA-ETZH / kJ mol$^{–1}$")
 ax.set_ylabel("$b_h$ from parameterisation / kJ mol$^{–1}$")
 fig.tight_layout()
+fig.savefig("figures_si/predict_bh_line.png")
 
 # %% Plot where bh does and doesn't work so well
 fig, ax = plt.subplots(
@@ -179,3 +180,4 @@ plt.colorbar(
     extend="both",
 )
 fig.tight_layout()
+fig.savefig("figures_si/predict_bh_map.png")

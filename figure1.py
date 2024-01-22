@@ -20,7 +20,7 @@ lr_fCO2 = linregress(t93.temperature, np.log(fCO2))  # slope comes out as 42.2 n
 lr_slope = 42.3e-3
 lr_intercept = np.mean(np.log(fCO2) - t93.temperature * lr_slope)
 
-# %%
+# Get alkalinity
 opt_total_borate = 1
 alkalinity_10 = t93.get_alkalinity(10, opt_total_borate)[0]
 alkalinity_08 = t93.get_alkalinity(8, opt_total_borate)[0]
@@ -159,21 +159,21 @@ ax.set_ylim((-43, 23))
 
 ax = axs[1]
 ax.text(0, 1.05, "(b)", transform=ax.transAxes)
-ax.axhline(1e3 * 0.0423, **style_linear)
+ax.axhline(1e3 * pyco2.upsilon.ups_linear_TOG93(), **style_linear)
 ax.plot(
     v_temperature,
-    1e3 * pwtools.get_eta_h(pwtools.bh_theory, v_temperature),
+    1e3 * pyco2.upsilon.ups_enthalpy_H24(v_temperature, pwtools.Rgas * 10),
     **style_vht,
 )
 ax.plot(v_temperature, 1e3 * v_results_08["dlnfCO2_dT"], **style_pyco2_08)
 ax.plot(
     v_temperature,
-    1e3 * (0.0433 - 8.7e-5 * v_temperature),
+    1e3 * pyco2.upsilon.ups_quadratic_TOG93(v_temperature),
     **style_poly,
 )
 ax.plot(
     v_temperature,
-    1e3 * pwtools.get_eta_h(pwtools.bh_best, v_temperature),
+    1e3 * pyco2.upsilon.ups_TOG93_H24(v_temperature, pwtools.Rgas * 10),
     **style_vh,
 )
 ax.plot(v_temperature, 1e3 * v_results_10["dlnfCO2_dT"], **style_pyco2_10)
