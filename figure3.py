@@ -12,42 +12,45 @@ import pwtools
 # Initialise random number generator
 rng = np.random.default_rng(1)
 
-# Determine settings
-n_reps = int(1e6)  # use 1e6 for the manuscript --- takes about 10 minutes
-n_meas = len(t93.pCO2)
+# %% Determine settings
+n_reps = int(1e4)  # use 1e6 for the manuscript --- takes about 10 minutes
 opt_k_carbonic = 10
 opt_total_borate = 1
+fCO2 = t93.get_fCO2(opt_k_carbonic, opt_total_borate)
+n_meas = len(fCO2)
 
 # Define uncertainties
-u_pCO2_random = 2  # µatm
-u_pCO2_bias = 2  # µatm
+u_fCO2_random = 2  # µatm
+u_fCO2_bias = 2  # µatm
 u_temperature_random = 0.01  # °C
 u_temperature_bias = 0.005  # °C
 
 # Initialise simulated fields ----------------------------------------- NEEDS UPDATING?
 sim_temperature = t93.temperature * np.ones((n_reps, 1))
-sim_pCO2 = t93.pCO2 * np.ones((n_reps, 1))
-# sim_pCO2 = np.exp(pwtools.get_lnpCO2_vh((pwtools.bh_best, pwtools.ch_best), sim_temperature))
+sim_fCO2 = fCO2 * np.ones((n_reps, 1))
+# sim_fCO2 = np.exp(
+#     pwtools.get_lnfCO2_vh((pwtools.bh_best, pwtools.ch_best), sim_temperature)
+# )
 
 # Generate and add uncertainties (comment lines out to omit the corresponding terms)
-sim_pCO2 += rng.normal(loc=0, scale=u_pCO2_random, size=(n_reps, n_meas))
-sim_pCO2 += rng.normal(loc=0, scale=u_pCO2_bias, size=(n_reps, 1))
+sim_fCO2 += rng.normal(loc=0, scale=u_fCO2_random, size=(n_reps, n_meas))
+sim_fCO2 += rng.normal(loc=0, scale=u_fCO2_bias, size=(n_reps, 1))
 sim_temperature += rng.uniform(
     low=-u_temperature_random / 2, high=u_temperature_random / 2, size=(n_reps, n_meas)
 )
 sim_temperature += rng.normal(loc=0, scale=u_temperature_bias, size=(n_reps, 1))
 
 # Make fits
-sim_lnpCO2 = np.log(sim_pCO2)
+sim_lnfCO2 = np.log(sim_fCO2)
 fit_l_bc = np.full((n_reps, 2), np.nan)
 fit_q_abc = np.full((n_reps, 3), np.nan)
 fit_h_bc = np.full((n_reps, 2), np.nan)
 for i in range(n_reps):
     if i % 1000 == 0:
-        print(i, n_reps)
-    fit_l_bc[i] = np.polyfit(sim_temperature[i], sim_lnpCO2[i], 1)
-    fit_q_abc[i] = np.polyfit(sim_temperature[i], sim_lnpCO2[i], 2)
-    fit_h_bc[i] = pwtools.fit_pCO2_vh(sim_temperature[i], sim_lnpCO2[i])["x"]
+        print(i, "/", n_reps)
+    fit_l_bc[i] = np.polyfit(sim_temperature[i], sim_lnfCO2[i], 1)
+    fit_q_abc[i] = np.polyfit(sim_temperature[i], sim_lnfCO2[i], 2)
+    fit_h_bc[i] = pwtools.fit_fCO2_vh(sim_temperature[i], sim_lnfCO2[i])["x"]
 
 # Get fit statistics
 sim_bl = fit_l_bc[:, 0]
@@ -162,7 +165,6 @@ ax.fill_betweenx(
 ax.set_ylabel("$σ(υ)$ / k°C$^{-1}$")
 ax.set_yticks(np.arange(0, 3, 0.4))
 ax.set_ylim([0, 2])
-ax.legend(loc="upper center")
 
 ax = axs[1]
 ax.text(0, 1.05, "(b)", transform=ax.transAxes)
@@ -179,9 +181,14 @@ ax.fill_betweenx(
     alpha=0.2,
     label="Ta93 $t$ range",
 )
-ax.set_ylabel("$σ$($p$CO$_2$) for ∆$t$ = ${:+}$ °C / %".format(f_dt))
+ax.set_ylabel(
+    "$σ$({sp}{f}CO$_2$) for ∆$t$ = ${dt:+}$ °C / %".format(
+        dt=f_dt, sp=pwtools.thinspace, f=pwtools.f
+    )
+)
 ax.set_yticks(np.arange(0, 0.3, 0.04))
 ax.set_ylim([0, 0.2])
+ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.3), ncol=2, edgecolor="k")
 
 for ax in axs:
     ax.set_xlabel("Temperature / °C")
@@ -189,4 +196,4 @@ for ax in axs:
     ax.set_xlim(f_t_soda[[0, -1]])
     ax.grid(alpha=0.3)
 fig.tight_layout()
-fig.savefig("figures/simulate.png")
+fig.savefig("figures_final/figure3.png")

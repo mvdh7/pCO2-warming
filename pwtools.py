@@ -2,7 +2,7 @@ from autograd import grad, jacobian
 from scipy.optimize import least_squares, curve_fit
 import numpy as np
 
-Rgas = 8.31446261815324
+Rgas = 8.314462618
 tzero = 273.15
 okc_codes = {
     1: "Ro93",

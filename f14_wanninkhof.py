@@ -1,3 +1,10 @@
+from sys import path
+
+pyco2path = "/Users/matthew/github/PyCO2SYS"
+if pyco2path not in path:
+    path.append(pyco2path)
+
+import PyCO2SYS as pyco2
 import pandas as pd
 import numpy as np
 from scipy.optimize import least_squares

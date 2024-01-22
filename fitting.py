@@ -29,7 +29,6 @@ bh_std = np.sqrt(fit_vh_curve[1][0][0])
 fit_vht = pwtools.fit_fCO2_vht(t93.temperature, np.log(fCO2))
 fit_vht_pCO2 = pwtools.fit_fCO2_vht(t93.temperature, np.log(t93.pCO2))
 
-
 # Just a 1:1 plot
 ft = np.linspace(-1.8, 35.83)
 fig, ax = plt.subplots(dpi=300)
