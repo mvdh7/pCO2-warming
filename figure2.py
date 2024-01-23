@@ -99,7 +99,7 @@ for i in range(len(fx)):
         fu[v][i] = wkf[v + "_diff"].std() / np.sqrt(fs[i])
 
 # Draw the figure
-fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 13 / 2.54))
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 15 / 2.54))
 # ax.scatter(
 #     "temperature_diff",
 #     "fCO2_uw_1_diff",
@@ -113,61 +113,64 @@ fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 13 / 2.54))
 ax.plot(
     fx,
     fy["fCO2_uw_1"],
-    c="xkcd:navy",
+    c=pwtools.blue,
     lw=1.5,
-    alpha=0.8,
+    # alpha=0.8,
     label="$υ_h$ (van 't Hoff, $b_h$ parameterised)",
 )
 ax.plot(
     fx,
     fy["fCO2_uw_2"],
-    c="xkcd:azure",
+    c=pwtools.blue,
     lw=1.5,
-    alpha=0.8,
-    label="$υ_h$ (van 't Hoff, $b_h$ fitted to Ta93)",
+    ls=(0, (3, 1)),
+    # alpha=0.8,
+    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
 )
 ax.plot(
     fx,
     fy["fCO2_uw_5"],
-    c="xkcd:strawberry",
+    c=pwtools.dark,
     lw=1.5,
-    alpha=0.8,
+    # alpha=0.8,
     label="$υ_l$ (Ta93, linear)",
-)
-ax.plot(
-    fx,
-    fy["fCO2_calc15"],
-    c="xkcd:green",
-    lw=1.5,
-    alpha=0.8,
-    label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, with $A_\mathrm{T}$ or $T_\mathrm{C}$)",
 )
 # ax.plot(
 #     fx,
 #     fy["fCO2_calc15"],
-#     c="xkcd:purple",
+#     c="xkcd:green",
 #     lw=1.5,
 #     alpha=0.8,
-#     label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, with $T_\mathrm{C}$)",
+#     label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, with $A_\mathrm{T}$)",
 # )
+ax.plot(
+    fx,
+    fy["fCO2_calc25"],
+    c=pwtools.pink,
+    lw=1.5,
+    ls=(2, (2,)),
+    # alpha=0.8,
+    label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, with $T_\mathrm{C}$)",
+)
 ax.fill_between(
     fx,
     -2 * fu["fCO2_uw_1"],
     2 * fu["fCO2_uw_1"],
-    color="xkcd:navy",
+    color=pwtools.dark,
     edgecolor="none",
     alpha=0.3,
-    label="2$σ$ uncertainty in rolling mean",
+    label="2$σ$ uncertainty in Wa22 dataset mean",
 )
 ax.axhline(0, c="k", lw=0.8, zorder=-1)
-ax.set_ylim([-10, 10])
+ax.set_ylim([-9, 9])
+ax.set_yticks(np.arange(-12, 12, 3))
 ax.set_xticks(np.arange(-20, 15, 5))
 ax.set_xlim([-20, 11.3])
 ax.set_xlabel("∆$t$ / °C")
 ax.tick_params(top=True, labeltop=False)
 for t in np.arange(0, 35, 5):
-    ax.text(t - 20, 11, "{}".format(t), ha="center", va="bottom")
-ax.text(0.5, 1.16, "$t_1$ / °C", ha="center", va="bottom", transform=ax.transAxes)
+    ax.text(t - 20, 9.65, "{}".format(t), ha="center", va="bottom")
+ax.text(0.5, 1.1, "$t_1$ / °C", ha="center", va="bottom", transform=ax.transAxes)
 ax.grid(alpha=0.2)
 ax.set_ylabel(
     "[{sp}{f}CO$_2$($t_1$) – {f}CO$_2$(20 °C)] / µatm".format(
@@ -175,7 +178,7 @@ ax.set_ylabel(
     )
 )
 ax.legend(
-    loc="upper center", bbox_to_anchor=(0.5, -0.25), edgecolor="k", ncol=1, fontsize=9
+    loc="upper center", bbox_to_anchor=(0.5, -0.15), edgecolor="k", ncol=1, fontsize=9
 )
 fig.tight_layout()
 fig.savefig("figures_final/figure2.png")

@@ -68,30 +68,45 @@ v_lnfCO2_poly = (
 f_linear = np.exp(v_temperature * lr_slope + lr_intercept)
 
 # Visualise similar to Takahashi et al. (1993) Figure A1
-style_linear = dict(c="xkcd:dark", label="$υ_l$ (Ta93, linear)", alpha=0.9, lw=1.5)
+style_linear = dict(
+    c=pwtools.dark,
+    label="$υ_l$ (Ta93, linear)",
+    # alpha=0.9,
+    lw=1.5,
+)
 style_poly = dict(
-    c="xkcd:dark", label="$υ_q$ (Ta93, quadratic)", alpha=0.8, lw=2, ls="--", zorder=2
+    c=pwtools.dark,
+    label="$υ_q$ (Ta93, quadratic)",
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (6, 2)),
+    zorder=2,
 )
 style_vh = dict(
-    c="xkcd:bluish", label="$υ_h$ (van 't Hoff, fitted)", alpha=0.8, lw=1.5, zorder=1
+    c=pwtools.blue,
+    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (3, 1)),
+    zorder=1,
 )
 style_pyco2_10 = dict(
-    c="xkcd:strawberry",
+    c=pwtools.pink,
     label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, Lu00)",
-    alpha=0.8,
-    lw=2,
-    ls=(2, (2,)),
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (2,)),
     zorder=3,
 )
 style_vht = style_vh.copy()
 style_vht.update(
-    dict(ls=(0, (3, 1, 1, 1)), label="$υ_x$ (van 't Hoff, ∆$_rH^⦵$)"), lw=2
+    dict(ls=(0, (3, 1, 1, 1)), label="$υ_x$ (van 't Hoff, ∆$_rH^⦵$)"), lw=1.5
 )
 style_pyco2_08 = dict(
-    c="xkcd:strawberry",
+    c=pwtools.pink,
     label=r"$υ_\mathrm{Mi79}$ (PyCO2SYS, Mi79)",
-    alpha=0.8,
-    lw=2,
+    # alpha=0.8,
+    lw=1.5,
     ls=":",
     zorder=3,
 )
@@ -105,6 +120,7 @@ ax.errorbar(
     np.sqrt(8),
     c="xkcd:dark",
     ls="none",
+    zorder=-1,
 )
 ax.scatter(
     t93.temperature,
@@ -113,7 +129,7 @@ ax.scatter(
     label="Ta93 measured",
     s=50,
     zorder=0,
-    alpha=0.9,
+    # alpha=0.9,
     edgecolor="none",
 )
 ax.axhline(0, **style_linear)

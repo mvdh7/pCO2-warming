@@ -11,9 +11,10 @@ import pwtools
 
 # Initialise random number generator
 rng = np.random.default_rng(1)
+use_quickload = True
 
 # %% Determine settings
-n_reps = int(1e4)  # use 1e6 for the manuscript --- takes about 10 minutes
+n_reps = int(1e6)  # use 1e6 for the manuscript --- takes about 10 minutes
 opt_k_carbonic = 10
 opt_total_borate = 1
 fCO2 = t93.get_fCO2(opt_k_carbonic, opt_total_borate)
@@ -25,12 +26,9 @@ u_fCO2_bias = 2  # µatm
 u_temperature_random = 0.01  # °C
 u_temperature_bias = 0.005  # °C
 
-# Initialise simulated fields ----------------------------------------- NEEDS UPDATING?
+# Initialise simulated fields
 sim_temperature = t93.temperature * np.ones((n_reps, 1))
 sim_fCO2 = fCO2 * np.ones((n_reps, 1))
-# sim_fCO2 = np.exp(
-#     pwtools.get_lnfCO2_vh((pwtools.bh_best, pwtools.ch_best), sim_temperature)
-# )
 
 # Generate and add uncertainties (comment lines out to omit the corresponding terms)
 sim_fCO2 += rng.normal(loc=0, scale=u_fCO2_random, size=(n_reps, n_meas))
@@ -42,15 +40,23 @@ sim_temperature += rng.normal(loc=0, scale=u_temperature_bias, size=(n_reps, 1))
 
 # Make fits
 sim_lnfCO2 = np.log(sim_fCO2)
-fit_l_bc = np.full((n_reps, 2), np.nan)
-fit_q_abc = np.full((n_reps, 3), np.nan)
-fit_h_bc = np.full((n_reps, 2), np.nan)
-for i in range(n_reps):
-    if i % 1000 == 0:
-        print(i, "/", n_reps)
-    fit_l_bc[i] = np.polyfit(sim_temperature[i], sim_lnfCO2[i], 1)
-    fit_q_abc[i] = np.polyfit(sim_temperature[i], sim_lnfCO2[i], 2)
-    fit_h_bc[i] = pwtools.fit_fCO2_vh(sim_temperature[i], sim_lnfCO2[i])["x"]
+if not use_quickload:
+    fit_l_bc = np.full((n_reps, 2), np.nan)
+    fit_q_abc = np.full((n_reps, 3), np.nan)
+    fit_h_bc = np.full((n_reps, 2), np.nan)
+    for i in range(n_reps):
+        if i % 1000 == 0:
+            print(i, "/", n_reps)
+        fit_l_bc[i] = np.polyfit(sim_temperature[i], sim_lnfCO2[i], 1)
+        fit_q_abc[i] = np.polyfit(sim_temperature[i], sim_lnfCO2[i], 2)
+        fit_h_bc[i] = pwtools.fit_fCO2_vh(sim_temperature[i], sim_lnfCO2[i])["x"]
+    np.save("quickload/fit_l_bc.npy", fit_l_bc)
+    np.save("quickload/fit_q_abc.npy", fit_q_abc)
+    np.save("quickload/fit_h_bc.npy", fit_h_bc)
+else:
+    fit_l_bc = np.load("quickload/fit_l_bc.npy")
+    fit_q_abc = np.load("quickload/fit_q_abc.npy")
+    fit_h_bc = np.load("quickload/fit_h_bc.npy")
 
 # Get fit statistics
 sim_bl = fit_l_bc[:, 0]
@@ -125,7 +131,7 @@ f_t_soda = np.linspace(-1.8, 35.83)  # temperature range in OceanSODA
 f_jac_eta_q = np.array([2 * f_t_soda, np.ones_like(f_t_soda)]).T
 f_std_eta_q = np.sqrt(np.diag(f_jac_eta_q @ f_sim_cov_q_ab @ f_jac_eta_q.T))
 
-f_dt = +1
+f_dt = +1  # °C
 f_t1_soda = f_t_soda + f_dt
 f_std_H_l = np.sqrt(pwtools.get_var_H_l(sim_var_bl, f_t_soda, f_t1_soda))
 f_std_H_q = np.sqrt(pwtools.get_var_H_q(sim_cov_q_ab, f_t_soda, f_t1_soda))
@@ -137,63 +143,45 @@ f_std_exp_H_l = np.exp(f_H_l) * f_std_H_l
 f_std_exp_H_q = np.exp(f_H_q) * f_std_H_q
 f_std_exp_H_h = np.exp(f_H_h) * f_std_H_h
 
-fig, axs = plt.subplots(dpi=300, figsize=(12 / 2.54, 16 / 2.54), nrows=2)
-
-ax = axs[0]
-ax.text(0, 1.05, "(a)", transform=ax.transAxes)
-ax.axhline(
-    1e3 * np.sqrt(var_eta_l__sim), c="xkcd:navy", lw=2, ls=":", label="Linear fit"
-)
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 12 / 2.54))
 ax.plot(
-    f_t_soda, 1e3 * f_std_eta_q, c="xkcd:navy", lw=2, ls="--", label="Quadratic fit"
+    f_t_soda,
+    100 * f_std_exp_H_l,
+    c=pwtools.dark,
+    lw=1.5,
+    label="$υ_l$ (Ta93, linear)",
 )
 ax.plot(
     f_t_soda,
-    1e3 * np.sqrt(pwtools.get_var_eta_h(sim_var_bh, f_t_soda)),
-    c="xkcd:navy",
-    lw=2,
-    label="van 't Hoff fit",
+    100 * f_std_exp_H_q,
+    c=pwtools.dark,
+    lw=1.5,
+    ls=(0, (6, 2)),
+    label="$υ_q$ (Ta93, quadratic)",
 )
-ax.fill_betweenx(
-    [0, 2],
-    np.min(t93.temperature),
-    np.max(t93.temperature),
-    facecolor="xkcd:navy",
-    alpha=0.2,
-    label="Ta93 $t$ range",
-)
-ax.set_ylabel("$σ(υ)$ / k°C$^{-1}$")
-ax.set_yticks(np.arange(0, 3, 0.4))
-ax.set_ylim([0, 2])
-
-ax = axs[1]
-ax.text(0, 1.05, "(b)", transform=ax.transAxes)
-ax.plot(f_t_soda, 100 * f_std_exp_H_l, c="xkcd:navy", lw=2, ls=":", label="Linear fit")
 ax.plot(
-    f_t_soda, 100 * f_std_exp_H_q, c="xkcd:navy", lw=2, ls="--", label="Quadratic fit"
+    f_t_soda,
+    100 * f_std_exp_H_h,
+    c=pwtools.blue,
+    lw=1.5,
+    ls=(0, (3, 1)),
+    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
 )
-ax.plot(f_t_soda, 100 * f_std_exp_H_h, c="xkcd:navy", lw=2, label="van 't Hoff fit")
 ax.fill_betweenx(
     [0, 0.2],
     np.min(t93.temperature),
     np.max(t93.temperature),
-    facecolor="xkcd:navy",
-    alpha=0.2,
+    facecolor=pwtools.dark,
+    alpha=0.3,
     label="Ta93 $t$ range",
 )
-ax.set_ylabel(
-    "$σ$({sp}{f}CO$_2$) for ∆$t$ = ${dt:+}$ °C / %".format(
-        dt=f_dt, sp=pwtools.thinspace, f=pwtools.f
-    )
-)
+ax.set_ylabel(r"$σ$[exp($Υ$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))
 ax.set_yticks(np.arange(0, 0.3, 0.04))
 ax.set_ylim([0, 0.2])
-ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.3), ncol=2, edgecolor="k")
-
-for ax in axs:
-    ax.set_xlabel("Temperature / °C")
-    ax.set_xticks(np.arange(0, 40, 5))
-    ax.set_xlim(f_t_soda[[0, -1]])
-    ax.grid(alpha=0.3)
+ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2, edgecolor="k")
+ax.set_xlabel("Temperature / °C")
+ax.set_xticks(np.arange(0, 40, 5))
+ax.set_xlim(f_t_soda[[0, -1]])
+ax.grid(alpha=0.3)
 fig.tight_layout()
 fig.savefig("figures_final/figure3.png")

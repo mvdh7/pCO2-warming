@@ -36,6 +36,11 @@ ch_theory_best_pCO2 = 16.713
 thinspace = " "
 f = "$ƒ$" + thinspace
 
+blue = "xkcd:bluish"
+pink = "xkcd:strawberry"
+orange = "xkcd:yellowish orange"
+dark = "xkcd:dark"
+
 
 def get_eta_l(bl):
     """Calculate linear υ with manuscript equation (8)."""

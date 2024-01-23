@@ -12,7 +12,7 @@ from cartopy import crs as ccrs, feature as cfeature
 
 opt_k_carbonic = 10
 
-all_polyfits = np.genfromtxt("quickload/f06_all_polyfits.txt")
+# all_polyfits = np.genfromtxt("quickload/f06_all_polyfits.txt")
 
 # Import OceanSODA-ETZH
 soda = xr.open_dataset(
@@ -39,7 +39,7 @@ soda["pCO2_w_pyco2"] = (("lat", "lon"), results["pCO2_out"])
 soda["pCO2_w_pyco2_diff"] = soda.pCO2_w_pyco2 - soda.pCO2
 
 # %% T93 linear equation
-soda["pCO2_w_linear"] = np.exp(np.log(soda.pCO2) + 0.0423 * dT)
+soda["pCO2_w_linear"] = soda.pCO2 * np.exp(0.0423 * dT)
 soda["pCO2_w_linear_diff"] = soda.pCO2_w_linear - soda.pCO2
 soda["pCO2_w_linear_error"] = (soda.pCO2_w_linear - soda.pCO2_w_pyco2) / dT
 
@@ -51,13 +51,13 @@ soda["pCO2_w_quad"] = soda.pCO2 * np.exp(
 soda["pCO2_w_quad_diff"] = soda.pCO2_w_quad - soda.pCO2
 soda["pCO2_w_quad_error"] = (soda.pCO2_w_quad - soda.pCO2_w_pyco2) / dT
 
-# Linear equation but with T-dependence of eta following f06
-ltfunc = np.polyval(all_polyfits[opt_k_carbonic - 1], T) / 100
-ltfunc_w = np.polyval(all_polyfits[opt_k_carbonic - 1], T + dT) / 100
+# # Linear equation but with T-dependence of eta following f06
+# ltfunc = np.polyval(all_polyfits[opt_k_carbonic - 1], T) / 100
+# ltfunc_w = np.polyval(all_polyfits[opt_k_carbonic - 1], T + dT) / 100
 
-soda["pCO2_w_ltfunc"] = np.exp(np.log(soda.pCO2) + (ltfunc + ltfunc_w) * dT / 2)
-soda["pCO2_w_ltfunc_diff"] = soda.pCO2_w_ltfunc - soda.pCO2
-soda["pCO2_w_ltfunc_error"] = (soda.pCO2_w_ltfunc - soda.pCO2_w_pyco2) / dT
+# soda["pCO2_w_ltfunc"] = np.exp(np.log(soda.pCO2) + (ltfunc + ltfunc_w) * dT / 2)
+# soda["pCO2_w_ltfunc_diff"] = soda.pCO2_w_ltfunc - soda.pCO2
+# soda["pCO2_w_ltfunc_error"] = (soda.pCO2_w_ltfunc - soda.pCO2_w_pyco2) / dT
 
 fig, axs = plt.subplots(
     dpi=300,
