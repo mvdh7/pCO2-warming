@@ -44,7 +44,7 @@ if not use_quickload:
     soda_monthly["fCO2"] = (("month", "lat", "lon"), results["fCO2"])
 
     # Fit bh across the globe
-    ex_temperature = np.linspace(-1.8, 35.83)
+    ex_temperature = np.linspace(-1.8, 35.83, num=50)
     soda_monthly["ex_temperature"] = ("ex_temperature", ex_temperature)
     soda_monthly = soda_monthly.set_coords("ex_temperature")
     ex_fCO2 = np.full((*soda_monthly.dlnfCO2_dT.shape, ex_temperature.size), np.nan)

@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 import takahashi93 as t93
 import pwtools
 
-# Do own "linear regression" (forced to T93 slope) and quadratic fit
+# %% Do own "linear regression" (forced to T93 slope) and quadratic fit
 fCO2 = t93.get_fCO2(10, 1)
 lr_pCO2 = linregress(
     t93.temperature, np.log(t93.pCO2)

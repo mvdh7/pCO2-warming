@@ -61,7 +61,7 @@ results_25 = pyco2.sys(
 wkf["fCO2_calc25"] = results_25["fCO2_out"]
 
 # %% Calculate the fCO2 adjustment with different methods
-opt_at = [1, 2, 5]
+opt_at = [1, 2, 5, 6]
 results = pyco2.sys(
     par1=wkf.fCO2_d20.to_numpy(),
     par1_type=5,
@@ -71,14 +71,23 @@ results = pyco2.sys(
     opt_adjust_temperature=np.vstack(opt_at),
     opt_which_fCO2_insitu=2,
 )
-wkf["fCO2_uw_1"], wkf["fCO2_uw_2"], wkf["fCO2_uw_5"] = results["fCO2_out"]
+wkf["fCO2_uw_1"], wkf["fCO2_uw_2"], wkf["fCO2_uw_5"], wkf["fCO2_uw_6"] = results[
+    "fCO2_out"
+]
 
 # Visualise
 fwindow = 4  # °C
 fx = np.linspace(
     np.min(wkf.temperature_diff) + 0.1, np.max(wkf.temperature_diff) - 0.1, num=100
 )
-fvars = ["fCO2_uw_1", "fCO2_uw_2", "fCO2_uw_5", "fCO2_calc15", "fCO2_calc25"]
+fvars = [
+    "fCO2_uw_1",
+    "fCO2_uw_2",
+    "fCO2_uw_5",
+    "fCO2_uw_6",
+    "fCO2_calc15",
+    "fCO2_calc25",
+]
 for v in fvars:
     wkf[v + "_diff"] = wkf[v] - wkf.fCO2_uw
 fy = {v: np.full(fx.size, np.nan) for v in fvars}
@@ -112,11 +121,21 @@ fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 15 / 2.54))
 # )
 ax.plot(
     fx,
-    fy["fCO2_uw_1"],
-    c=pwtools.blue,
+    fy["fCO2_uw_5"],
+    c=pwtools.dark,
     lw=1.5,
     # alpha=0.8,
-    label="$υ_h$ (van 't Hoff, $b_h$ parameterised)",
+    label="$υ_l$ (Ta93, linear)",
+    zorder=-1,
+)
+ax.plot(
+    fx,
+    fy["fCO2_uw_6"],
+    c=pwtools.dark,
+    lw=1.5,
+    ls=(0, (6, 2)),
+    label="$υ_q$ (Ta93, quadratic)",
+    zorder=2,
 )
 ax.plot(
     fx,
@@ -126,14 +145,16 @@ ax.plot(
     ls=(0, (3, 1)),
     # alpha=0.8,
     label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    zorder=1,
 )
 ax.plot(
     fx,
-    fy["fCO2_uw_5"],
-    c=pwtools.dark,
+    fy["fCO2_uw_1"],
+    c=pwtools.blue,
     lw=1.5,
     # alpha=0.8,
-    label="$υ_l$ (Ta93, linear)",
+    label="$υ_h$ (van 't Hoff, $b_h$ parameterised)",
+    zorder=0,
 )
 # ax.plot(
 #     fx,
@@ -151,6 +172,7 @@ ax.plot(
     ls=(2, (2,)),
     # alpha=0.8,
     label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, with $T_\mathrm{C}$)",
+    zorder=3,
 )
 ax.fill_between(
     fx,
@@ -158,18 +180,19 @@ ax.fill_between(
     2 * fu["fCO2_uw_1"],
     color=pwtools.dark,
     edgecolor="none",
-    alpha=0.3,
+    alpha=0.2,
     label="2$σ$ uncertainty in Wa22 dataset mean",
+    zorder=-2,
 )
 ax.axhline(0, c="k", lw=0.8, zorder=-1)
-ax.set_ylim([-9, 9])
-ax.set_yticks(np.arange(-12, 12, 3))
+ax.set_yticks(np.arange(-12, 12, 2))
+ax.set_ylim([-8, 8])
 ax.set_xticks(np.arange(-20, 15, 5))
 ax.set_xlim([-20, 11.3])
 ax.set_xlabel("∆$t$ / °C")
 ax.tick_params(top=True, labeltop=False)
 for t in np.arange(0, 35, 5):
-    ax.text(t - 20, 9.65, "{}".format(t), ha="center", va="bottom")
+    ax.text(t - 20, 8.5, "{}".format(t), ha="center", va="bottom")
 ax.text(0.5, 1.1, "$t_1$ / °C", ha="center", va="bottom", transform=ax.transAxes)
 ax.grid(alpha=0.2)
 ax.set_ylabel(
