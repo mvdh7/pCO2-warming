@@ -12,7 +12,7 @@ from cartopy import crs as ccrs, feature as cfeature
 import pwtools
 
 soda_monthly = xr.open_dataset("quickload/soda_monthly.zarr", engine="zarr")
-dt = 1  # °C
+temperature_out = soda_monthly.temperature.mean("month").mean().data
 
 # Convert with PyCO2SYS from TA and DIC
 results_calc12 = pyco2.sys(
@@ -22,7 +22,7 @@ results_calc12 = pyco2.sys(
     par2_type=2,
     salinity=soda_monthly.salinity.data,
     temperature=soda_monthly.temperature.data,
-    temperature_out=soda_monthly.temperature.data + dt,
+    temperature_out=temperature_out,
     opt_k_carbonic=10,
     opt_total_borate=1,
 )
@@ -32,16 +32,17 @@ soda_monthly["fCO2_dt_calc12"] = (
 )
 
 # Convert with the various upsilon options
-opt_at = [5, 1, 2, 6]
+opt_at = [5, 1, 2, 6, 4]
 results_dt = pyco2.sys(
     par1=soda_monthly.fCO2.data,
     par1_type=5,
     salinity=soda_monthly.salinity.data,
     temperature=soda_monthly.temperature.data,
-    temperature_out=soda_monthly.temperature.data + dt,
+    temperature_out=temperature_out,
     opt_k_carbonic=10,
     opt_total_borate=1,
-    opt_adjust_temperature=np.reshape(np.array([[opt_at]]), [len(opt_at), 1, 1, 1]),
+    opt_adjust_temperature=np.reshape(np.array([[[opt_at]]]), [len(opt_at), 1, 1, 1]),
+    bh_upsilon=soda_monthly.bh.data,
     opt_which_fCO2_insitu=1,
 )
 for i, at in enumerate(opt_at):
@@ -84,8 +85,9 @@ fig, axs = plt.subplots(
     figsize=(9 / 2.54, 13 / 2.54),
     subplot_kw={"projection": ccrs.Robinson(central_longitude=205)},
 )
-letters = ["a", "b"]
-for i, at in enumerate(opt_at[:2]):
+letters = ["c", "d"]
+abs_vmin_vmax = 10
+for i, at in enumerate([5, 1]):
     ax = axs[i]
     ax.set_facecolor("xkcd:silver")
     fm = (
@@ -93,21 +95,26 @@ for i, at in enumerate(opt_at[:2]):
         .mean("month")
         .plot(
             ax=ax,
-            vmin=-1.5,
-            vmax=1.5,
+            vmin=-abs_vmin_vmax,
+            vmax=abs_vmin_vmax,
             cmap="RdBu_r",
             add_colorbar=False,
             transform=ccrs.PlateCarree(),
         )
+    )
+    soda_monthly.temperature.mean("month").plot.contour(
+        levels=[temperature_out],
+        colors="xkcd:dark",
+        transform=ccrs.PlateCarree(),
+        ax=ax,
+        alpha=0.15,
     )
     ax.text(0, 1, "(" + letters[i] + ")", transform=ax.transAxes)
     if i == 0:
         plt.colorbar(
             fm,
             location="bottom",
-            label="Bias in {f}CO$_2$($t_0$ + {dt} °C) / µatm".format(
-                f=pwtools.f, dt=dt
-            ),
+            label="Bias in {f}CO$_2$($t_1$) / µatm".format(f=pwtools.f),
             pad=0.1,
             aspect=20,
             fraction=0.04,
@@ -118,4 +125,4 @@ for i, at in enumerate(opt_at[:2]):
         facecolor=0.1 * np.array([1, 1, 1]),
     )
 fig.tight_layout()
-fig.savefig("figures_final/figure5.png")
+fig.savefig("figures_final/figure5_part2.png")

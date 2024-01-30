@@ -64,25 +64,79 @@ if not use_quickload:
         )["fCO2"]
     soda_monthly["ex_fCO2"] = (("month", "lat", "lon", "ex_temperature"), ex_fCO2)
 
-    # This second loop, to fit values for bh, takes about 1.5 minutes
+    # This second loop, to fit values for bh (and ch), takes about 1.5 minutes
     fit_bh = np.full(soda_monthly.dlnfCO2_dT.shape, np.nan)
+    fit_ch = np.full(soda_monthly.dlnfCO2_dT.shape, np.nan)
     for m in range(soda_monthly.month.size):
         print(m + 1, "/", soda_monthly.month.size)
-        for i in range(soda.lat.size):
-            for j in range(soda.lon.size):
+        for i in range(soda_monthly.lat.size):
+            for j in range(soda_monthly.lon.size):
                 if ~np.isnan(ex_fCO2[m, i, j, 0]):
-                    fit_bh[m, i, j] = pwtools.fit_vh_curve(
+                    fit_bh[m, i, j], fit_ch[m, i, j] = pwtools.fit_vh_curve(
                         ex_temperature, ex_fCO2[m, i, j, :]
-                    )[0][0]
+                    )[0]
 
-    # Put fitted bh values into soda_monthly
+    # Put fitted bh and ch values into soda_monthly
     soda_monthly["bh"] = (("month", "lat", "lon"), fit_bh)
+    soda_monthly["ch"] = (("month", "lat", "lon"), fit_ch)
 
     # Save soda_monthly to file for convenience
     soda_monthly.to_zarr("quickload/soda_monthly.zarr")
 
 else:
     soda_monthly = xr.open_dataset("quickload/soda_monthly.zarr", engine="zarr")
+
+# %%
+ex_temperature = np.reshape(ex_temperature, (1, 1, 1, 50))
+ex_fCO2 = soda_monthly.ex_fCO2.data
+fit_bh = np.reshape(soda_monthly.bh.data, (12, 180, 360, 1))
+fit_ch = np.reshape(soda_monthly.ch.data, (12, 180, 360, 1))
+
+fCO2_from_bhch = np.exp(
+    fit_ch - fit_bh / (pwtools.Rgas * (ex_temperature + pwtools.tzero))
+)
+soda_monthly["fCO2_from_bhch"] = (
+    ("month", "lat", "lon", "ex_temperature"),
+    fCO2_from_bhch,
+)
+
+fit_bh_rmsd = np.sqrt(np.mean((fCO2_from_bhch - ex_fCO2) ** 2, axis=3))
+soda_monthly["fit_bh_rmsd"] = (("month", "lat", "lon"), fit_bh_rmsd)
+soda_monthly["dic_ta"] = soda_monthly.dic / soda_monthly.talk
+
+# %% Calculate non-carbonate alkalinity
+results = pyco2.sys(
+    par1=soda_monthly.talk.data,
+    par1_type=1,
+    par2=soda_monthly.dic.data,
+    par2_type=2,
+    salinity=soda_monthly.salinity.data,
+    temperature=soda_monthly.temperature.data,
+    opt_k_carbonic=10,
+    opt_total_borate=1,
+)
+# %%
+soda_monthly["alk_carb_bicarb"] = (
+    ("month", "lat", "lon"),
+    results["HCO3"] + 2 * results["CO3"],
+)
+soda_monthly["alk_non_carb_bicarb"] = soda_monthly.talk - soda_monthly.alk_carb_bicarb
+for v in [
+    "pH",
+    "CO2",
+    "alkalinity_borate",
+    "isocapnic_quotient",
+    "beta_dic",
+    "gamma_dic",
+    "beta_alk",
+    "gamma_alk",
+    "revelle_factor",
+]:
+    soda_monthly[v] = (("month", "lat", "lon"), results[v])
+soda_monthly["CO2_dic_pct"] = 100 * soda_monthly.CO2 / soda_monthly.dic
+soda_monthly["alk_non_carb_pct"] = (
+    100 * soda_monthly.alk_non_carb_bicarb / soda_monthly.talk
+)
 
 
 # %% Make the parameterisation
@@ -181,3 +235,136 @@ plt.colorbar(
 )
 fig.tight_layout()
 fig.savefig("figures_si/predict_bh_map.png")
+
+# %%
+baltic = soda_monthly.sel(lon=slice(13, 24), lat=slice(54, 65))
+
+# Find max RMSD in Baltic
+baltic_rmsd = baltic.fit_bh_rmsd.data.ravel()
+baltic_rmsd[np.isnan(baltic_rmsd)] = 0
+baltic_rmsd_argmax = np.argmax(baltic_rmsd)
+m, i, j = np.unravel_index(baltic_rmsd_argmax, baltic.fit_bh_rmsd.data.shape)
+
+fig, ax = plt.subplots(dpi=300)
+ax.plot(
+    ex_temperature.ravel(),
+    baltic.ex_fCO2.data[m, i, j, :] - baltic.fCO2_from_bhch.data[m, i, j, :],
+)
+ax.axhline(c="k", lw=0.8)
+
+# %%
+baltic_shape = list(baltic.ex_fCO2.data.shape)
+baltic_shape[-1] = 1
+fig, ax = plt.subplots(dpi=300)
+fs = ax.scatter(
+    np.tile(ex_temperature, baltic_shape),
+    baltic.ex_fCO2.data - baltic.fCO2_from_bhch.data,
+    s=5,
+    c=np.tile(baltic.dic_ta, (1, 1, 1, ex_temperature.size)),
+)
+plt.colorbar(fs, label=r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
+ax.axhline(c="k", lw=0.8)
+ax.set_xlabel("Temperature / °C")
+ax.set_ylabel("{f}CO$_2$($υ_h$) – {f}CO$_2$(Lu00) / µatm".format(f=pwtools.f))
+ax.set_title("Baltic Sea")
+
+# %%
+sm_shape = list(soda_monthly.ex_fCO2.data.shape)
+sm_shape[-1] = 1
+lo_temperature = np.tile(ex_temperature, sm_shape)
+lo_diff = soda_monthly.ex_fCO2.data - soda_monthly.fCO2_from_bhch.data
+lo_dic_ta = soda_monthly.dic_ta.data
+L = lo_dic_ta < 0.9
+lo_temperature = lo_temperature[L]
+lo_diff = lo_diff[L]
+lo_dic_ta = lo_dic_ta[L]
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(lo_temperature[::10], lo_diff[::10], s=5, alpha=0.5)
+ax.axhline(c="k", lw=0.8)
+ax.set_xlabel("Temperature / °C")
+ax.set_ylabel("{f}CO$_2$($b_h$) – {f}CO$_2$(Lu00) / µatm".format(f=pwtools.f))
+ax.set_title(r"$T_\mathrm{C}$ / $A_\mathrm{T}$ < 0.9")
+
+# %%
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    "dic_ta",
+    "fit_bh_rmsd",
+    data=soda_monthly,
+    s=5,
+    alpha=0.2,
+    c="salinity",
+    edgecolor="none",
+)
+ax.scatter(
+    "dic_ta",
+    "fit_bh_rmsd",
+    data=baltic,
+    s=5,
+    c="xkcd:strawberry",
+    alpha=0.5,
+    edgecolor="none",
+)
+ax.set_xlabel(r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
+ax.set_ylabel("RMSD of $b_h$ fit / µatm")
+ax.set_ylim((0, 5.2))
+
+# %%
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    "alk_non_carb_pct",
+    "fit_bh_rmsd",
+    data=soda_monthly,
+    s=5,
+    alpha=0.2,
+    c="salinity",
+    edgecolor="none",
+)
+# ax.scatter(
+#     "alk_non_carb_bicarb",
+#     "fit_bh_rmsd",
+#     data=baltic,
+#     s=5,
+#     c="xkcd:strawberry",
+#     alpha=0.5,
+#     edgecolor="none",
+# )
+ax.set_xlabel(r"[($A_\mathrm{T}$ $-$ $A_x$) / $A_\mathrm{T}$] / %")
+ax.set_ylabel("RMSD of $b_h$ fit / µatm")
+ax.set_ylim((0, 5.2))
+
+# %%
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    "pH",
+    "fit_bh_rmsd",
+    data=soda_monthly,
+    s=5,
+    alpha=0.2,
+    c="alk_non_carb_bicarb",
+    edgecolor="none",
+)
+ax.set_xlabel(r"pH$_\mathrm{T}$")
+ax.set_ylabel("RMSD of $b_h$ fit / µatm")
+ax.set_ylim((0, 5.2))
+
+# %%
+fig, ax = plt.subplots(dpi=300)
+fs = ax.scatter(
+    "CO2_dic_pct",
+    "fit_bh_rmsd",
+    data=soda_monthly,
+    s=5,
+    alpha=0.2,
+    c="salinity",
+    edgecolor="none",
+)
+plt.colorbar(fs)
+ax.set_xlabel(r"{[CO$_2$(aq)] / $T_\mathrm{C}$} / %")
+ax.set_ylabel("RMSD of $b_h$ fit / µatm")
+ax.set_ylim((0, 5.2))
+
+# %%
+for m in range(1, 13):
+    fig, ax = plt.subplots(dpi=300)
+    baltic.fit_bh_rmsd.sel(month=m).plot(ax=ax, vmin=0, vmax=5)

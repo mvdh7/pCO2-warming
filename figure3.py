@@ -175,11 +175,11 @@ ax.fill_betweenx(
     alpha=0.2,
     label="Ta93 $t$ range",
 )
-ax.set_ylabel(r"$σ$[exp($Υ$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))
+ax.set_ylabel(r"$σ$[exp($Y$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))
 ax.set_yticks(np.arange(0, 0.3, 0.04))
 ax.set_ylim([0, 0.2])
 ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2, edgecolor="k")
-ax.set_xlabel("Temperature / °C")
+ax.set_xlabel("$t_0$ / °C")
 ax.set_xticks(np.arange(0, 40, 5))
 ax.set_xlim(f_t_soda[[0, -1]])
 ax.grid(alpha=0.3)

@@ -153,7 +153,7 @@ ax.plot(
     c=pwtools.blue,
     lw=1.5,
     # alpha=0.8,
-    label="$υ_h$ (van 't Hoff, $b_h$ parameterised)",
+    label="$υ_p$ (van 't Hoff, $b_h$ parameterised)",
     zorder=0,
 )
 # ax.plot(
@@ -181,7 +181,7 @@ ax.fill_between(
     color=pwtools.dark,
     edgecolor="none",
     alpha=0.2,
-    label="2$σ$ uncertainty in Wa22 dataset mean",
+    label="2$σ$ uncertainty in Wa22 compilation mean",
     zorder=-2,
 )
 ax.axhline(0, c="k", lw=0.8, zorder=-1)
