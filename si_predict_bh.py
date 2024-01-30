@@ -274,16 +274,51 @@ sm_shape[-1] = 1
 lo_temperature = np.tile(ex_temperature, sm_shape)
 lo_diff = soda_monthly.ex_fCO2.data - soda_monthly.fCO2_from_bhch.data
 lo_dic_ta = soda_monthly.dic_ta.data
-L = lo_dic_ta < 0.9
+lo_colour = soda_monthly.dic_ta.data
+L = lo_dic_ta < 9
 lo_temperature = lo_temperature[L]
 lo_diff = lo_diff[L]
 lo_dic_ta = lo_dic_ta[L]
-fig, ax = plt.subplots(dpi=300)
-ax.scatter(lo_temperature[::10], lo_diff[::10], s=5, alpha=0.5)
+lo_colour = lo_colour[L]
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 9 / 2.54))
+coarsen = 5
+fx = lo_temperature[::coarsen].ravel()
+fy = lo_diff[::coarsen].ravel()
+fc = np.tile(lo_colour, (50, 1)).T[::coarsen].ravel()
+fix = np.argsort(fc)
+fx = fx[fix][::-1]
+fy = fy[fix][::-1]
+fc = fc[fix][::-1]
+fs = ax.scatter(fx, fy, c=fc, s=5)
+plt.colorbar(fs, label=r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
 ax.axhline(c="k", lw=0.8)
 ax.set_xlabel("Temperature / °C")
-ax.set_ylabel("{f}CO$_2$($b_h$) – {f}CO$_2$(Lu00) / µatm".format(f=pwtools.f))
-ax.set_title(r"$T_\mathrm{C}$ / $A_\mathrm{T}$ < 0.9")
+ax.set_ylabel(
+    "[{sp}{f}CO$_2$($υ_h$) $-$ {f}CO$_2$(Lu00)] / µatm".format(
+        f=pwtools.f, sp=pwtools.thinspace
+    )
+)
+# ax.set_title(r"$T_\mathrm{C}$ / $A_\mathrm{T}$ < 0.9")
+fig.tight_layout()
+fig.savefig("figures_final/si_predict_bh_figure3.png")
+
+# %%
+coarsen = 1
+fy = (
+    (soda_monthly.ex_fCO2 - soda_monthly.fCO2_from_bhch)
+    .isel(ex_temperature=0)
+    .data.ravel()
+)
+L = ~np.isnan(fy)
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    soda_monthly.dic_ta.data.ravel()[L][::coarsen],
+    fy[L][::coarsen],
+    s=5,
+    edgecolor="none",
+    alpha=0.5,
+    c="xkcd:dark",
+)
 
 # %%
 fig, ax = plt.subplots(dpi=300)
@@ -367,4 +402,4 @@ ax.set_ylim((0, 5.2))
 # %%
 for m in range(1, 13):
     fig, ax = plt.subplots(dpi=300)
-    baltic.fit_bh_rmsd.sel(month=m).plot(ax=ax, vmin=0, vmax=5)
+    soda_monthly.fit_bh_rmsd.sel(month=m).plot(ax=ax, vmin=0, vmax=5)
