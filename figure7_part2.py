@@ -125,4 +125,4 @@ for i, at in enumerate([5, 1]):
         facecolor=0.1 * np.array([1, 1, 1]),
     )
 fig.tight_layout()
-fig.savefig("figures_final/figure5_part2.png")
+fig.savefig("figures_final/figure7_part2.png")
