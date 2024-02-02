@@ -131,6 +131,8 @@ for v in [
     "beta_alk",
     "gamma_alk",
     "revelle_factor",
+    "HCO3",
+    "CO3",
 ]:
     soda_monthly[v] = (("month", "lat", "lon"), results[v])
 soda_monthly["CO2_dic_pct"] = 100 * soda_monthly.CO2 / soda_monthly.dic
@@ -268,39 +270,42 @@ ax.set_xlabel("Temperature / °C")
 ax.set_ylabel("{f}CO$_2$($υ_h$) – {f}CO$_2$(Lu00) / µatm".format(f=pwtools.f))
 ax.set_title("Baltic Sea")
 
-# %%
-sm_shape = list(soda_monthly.ex_fCO2.data.shape)
-sm_shape[-1] = 1
-lo_temperature = np.tile(ex_temperature, sm_shape)
-lo_diff = soda_monthly.ex_fCO2.data - soda_monthly.fCO2_from_bhch.data
-lo_dic_ta = soda_monthly.dic_ta.data
-lo_colour = soda_monthly.dic_ta.data
-L = lo_dic_ta < 9
-lo_temperature = lo_temperature[L]
-lo_diff = lo_diff[L]
-lo_dic_ta = lo_dic_ta[L]
-lo_colour = lo_colour[L]
-fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 9 / 2.54))
-coarsen = 5
-fx = lo_temperature[::coarsen].ravel()
-fy = lo_diff[::coarsen].ravel()
-fc = np.tile(lo_colour, (50, 1)).T[::coarsen].ravel()
-fix = np.argsort(fc)
-fx = fx[fix][::-1]
-fy = fy[fix][::-1]
-fc = fc[fix][::-1]
-fs = ax.scatter(fx, fy, c=fc, s=5)
-plt.colorbar(fs, label=r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
-ax.axhline(c="k", lw=0.8)
-ax.set_xlabel("Temperature / °C")
-ax.set_ylabel(
-    "[{sp}{f}CO$_2$($υ_h$) $-$ {f}CO$_2$(Lu00)] / µatm".format(
-        f=pwtools.f, sp=pwtools.thinspace
-    )
+# %% Non-carbonate alkalinity
+nc_alkalinity = soda_monthly.talk.data.astype(float)
+nc_dic = soda_monthly.dic.data.astype(float)
+nc_salinity = soda_monthly.salinity.data.astype(float)
+nc_dic_alk = nc_dic / nc_alkalinity
+L = ~np.isnan(nc_dic_alk)
+nc_alkalinity = nc_alkalinity[L]
+nc_dic = nc_dic[L]
+nc_salinity = nc_salinity[L]
+nc_dic_alk = nc_dic_alk[L]
+Mpoint = 0.9365
+Mpoint = 0.98
+M = (nc_dic_alk >= Mpoint - 0.00005) & (nc_dic_alk <= Mpoint + 0.00005)
+# M = (nc_dic_alk >= 0.93) & (nc_dic_alk <= 0.94)
+
+results_exp = pyco2.sys(
+    par1=nc_alkalinity[M],
+    par1_type=1,
+    par2=nc_dic[M],
+    par2_type=2,
+    salinity=nc_salinity[M],
+    temperature=np.vstack(ex_temperature.ravel()),
+    opt_k_carbonic=10,
+    opt_total_borate=1,
+    opt_buffers_mode=0,
 )
-# ax.set_title(r"$T_\mathrm{C}$ / $A_\mathrm{T}$ < 0.9")
-fig.tight_layout()
-fig.savefig("figures_final/si_predict_bh_figure3.png")
+
+bcc = results_exp["HCO3"] ** 2 / results_exp["CO3"]
+bcc_mean = np.mean(bcc, axis=0)
+
+fig, ax = plt.subplots(dpi=300)
+ax.scatter(
+    results_exp["temperature"].ravel(),
+    (bcc - bcc_mean).ravel(),
+    c=bcc.ravel(),
+)
 
 # %%
 coarsen = 1

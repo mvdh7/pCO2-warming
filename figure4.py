@@ -143,46 +143,7 @@ f_std_exp_H_l = np.exp(f_H_l) * f_std_H_l
 f_std_exp_H_q = np.exp(f_H_q) * f_std_H_q
 f_std_exp_H_h = np.exp(f_H_h) * f_std_H_h
 
-fig, axs = plt.subplots(dpi=300, figsize=(12 / 2.54, 16 / 2.54), nrows=2)
-
-ax = axs[0]
-ax.text(0, 1.05, "(a)", transform=ax.transAxes)
-ax.axhline(
-    1e3 * np.sqrt(var_eta_l__sim),
-    c=pwtools.dark,
-    lw=1.5,
-    # label="Linear fit",
-)
-ax.plot(
-    f_t_soda,
-    1e3 * f_std_eta_q,
-    c=pwtools.dark,
-    lw=2,
-    ls=(0, (6, 2)),
-    # label="Quadratic fit",
-)
-ax.plot(
-    f_t_soda,
-    1e3 * np.sqrt(pwtools.get_var_eta_h(sim_var_bh, f_t_soda)),
-    c=pwtools.blue,
-    lw=2,
-    ls=(0, (3, 1)),
-    # label="van 't Hoff fit",
-)
-ax.fill_betweenx(
-    [0, 2],
-    np.min(t93.temperature),
-    np.max(t93.temperature),
-    facecolor=pwtools.dark,
-    alpha=0.2,
-    # label="Ta93 $t$ range",
-)
-ax.set_ylabel("$σ(υ)$ / k°C$^{-1}$")
-ax.set_yticks(np.arange(0, 3, 0.4))
-ax.set_ylim([0, 2])
-
-ax = axs[1]
-ax.text(0, 1.05, "(b)", transform=ax.transAxes)
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 12 / 2.54))
 ax.plot(
     f_t_soda,
     100 * f_std_exp_H_l,
@@ -194,7 +155,7 @@ ax.plot(
     f_t_soda,
     100 * f_std_exp_H_q,
     c=pwtools.dark,
-    lw=2,
+    lw=1.5,
     ls=(0, (6, 2)),
     label="$υ_q$ (Ta93, quadratic)",
 )
@@ -202,7 +163,7 @@ ax.plot(
     f_t_soda,
     100 * f_std_exp_H_h,
     c=pwtools.blue,
-    lw=2,
+    lw=1.5,
     ls=(0, (3, 1)),
     label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
 )
@@ -211,18 +172,16 @@ ax.fill_betweenx(
     np.min(t93.temperature),
     np.max(t93.temperature),
     facecolor=pwtools.dark,
-    alpha=0.3,
+    alpha=0.2,
     label="Ta93 $t$ range",
 )
-ax.set_ylabel(r"$σ$[exp($Υ$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))
+ax.set_ylabel(r"$σ$[exp($Y$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))
 ax.set_yticks(np.arange(0, 0.3, 0.04))
 ax.set_ylim([0, 0.2])
-ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.3), ncol=2, edgecolor="k")
-
-for ax in axs:
-    ax.set_xlabel("Temperature / °C")
-    ax.set_xticks(np.arange(0, 40, 5))
-    ax.set_xlim(f_t_soda[[0, -1]])
-    ax.grid(alpha=0.3)
+ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2, edgecolor="k")
+ax.set_xlabel("$t_0$ / °C")
+ax.set_xticks(np.arange(0, 40, 5))
+ax.set_xlim(f_t_soda[[0, -1]])
+ax.grid(alpha=0.3)
 fig.tight_layout()
-fig.savefig("figures_si/figure3_both.png")
+fig.savefig("figures_final/figure4.png")
