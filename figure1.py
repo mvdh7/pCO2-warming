@@ -175,28 +175,28 @@ ax.set_ylim((-43, 23))
 
 ax = axs[1]
 ax.text(0, 1.05, "(b)", transform=ax.transAxes)
-ax.axhline(1e3 * pyco2.upsilon.ups_linear_TOG93(), **style_linear)
+ax.axhline(1e2 * pyco2.upsilon.ups_linear_TOG93(), **style_linear)
 ax.plot(
     v_temperature,
-    1e3 * pyco2.upsilon.ups_enthalpy_H24(v_temperature, pwtools.Rgas * 10),
+    1e2 * pyco2.upsilon.ups_enthalpy_H24(v_temperature, pwtools.Rgas * 10),
     **style_vht,
 )
-ax.plot(v_temperature, 1e3 * v_results_08["dlnfCO2_dT"], **style_pyco2_08)
+ax.plot(v_temperature, 1e2 * v_results_08["dlnfCO2_dT"], **style_pyco2_08)
 ax.plot(
     v_temperature,
-    1e3 * pyco2.upsilon.ups_quadratic_TOG93(v_temperature),
+    1e2 * pyco2.upsilon.ups_quadratic_TOG93(v_temperature),
     **style_poly,
 )
 ax.plot(
     v_temperature,
-    1e3 * pyco2.upsilon.ups_TOG93_H24(v_temperature, pwtools.Rgas * 10),
+    1e2 * pyco2.upsilon.ups_TOG93_H24(v_temperature, pwtools.Rgas * 10),
     **style_vh,
 )
-ax.plot(v_temperature, 1e3 * v_results_10["dlnfCO2_dT"], **style_pyco2_10)
+ax.plot(v_temperature, 1e2 * v_results_10["dlnfCO2_dT"], **style_pyco2_10)
 ax.set_xlabel("Temperature / °C")
-ax.set_ylabel("$υ$ / k°C$^{–1}$")
+ax.set_ylabel("$υ$ / % °C$^{–1}$")
 ax.set_xlim((np.min(v_temperature), np.max(v_temperature)))
-ax.set_ylim([30, 50])
+ax.set_ylim([3, 5])
 
 ax.legend(
     loc="upper center", bbox_to_anchor=(0.5, -0.3), edgecolor="k", ncol=2, fontsize=9

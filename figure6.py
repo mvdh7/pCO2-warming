@@ -87,7 +87,7 @@ widths = 0.85
 for i, k in enumerate(fvars):
     fvar = soda_monthly["ups_10_{}".format(k)].to_numpy()
     parts = ax.violinplot(
-        fvar[~np.isnan(fvar)],
+        fvar[~np.isnan(fvar)] / 10,
         [i],
         showextrema=False,
         points=100,
@@ -102,7 +102,7 @@ for x, o in enumerate(okc_order):
     xpos = i + x + 1
     ax.text(
         xpos,
-        65,
+        6.5,
         pwtools.okc_codes[o],
         ha="center",
         va="bottom",
@@ -110,7 +110,7 @@ for x, o in enumerate(okc_order):
         fontsize=8.5,
     )
     c = next(colours)
-    fvar = soda_monthly["ups_{:02.0f}_carbonic_1".format(o)].to_numpy()
+    fvar = soda_monthly["ups_{:02.0f}_carbonic_1".format(o)].to_numpy() / 10
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [xpos],
@@ -120,7 +120,7 @@ for x, o in enumerate(okc_order):
     )
     parts["bodies"][0].set_facecolor(c)
     parts["bodies"][0].set_alpha(0.6)
-    fvar = soda_monthly["ups_{:02.0f}_carbonic_2".format(o)].to_numpy()
+    fvar = soda_monthly["ups_{:02.0f}_carbonic_2".format(o)].to_numpy() / 10
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [i + x + 1],
@@ -130,7 +130,7 @@ for x, o in enumerate(okc_order):
     )
     parts["bodies"][0].set_facecolor(c)
     parts["bodies"][0].set_alpha(0.4)
-    fvar = soda_monthly["ups_{:02.0f}_ag".format(o)].to_numpy()
+    fvar = soda_monthly["ups_{:02.0f}_ag".format(o)].to_numpy() / 10
     parts = ax.violinplot(
         fvar[~np.isnan(fvar)],
         [i + x + 1],
@@ -140,24 +140,24 @@ for x, o in enumerate(okc_order):
     )
     parts["bodies"][0].set_facecolor(c)
     parts["bodies"][0].set_alpha(0.8)
-ax.plot([2.4, 20.6], [42.3, 42.3], c="xkcd:dark", alpha=0.8, ls=":", lw=1.5)
+ax.plot([2.4, 20.6], [4.23, 4.23], c="xkcd:dark", alpha=0.8, ls=":", lw=1.5)
 ax.grid(alpha=0.3, axis="y")
 ax.grid(alpha=0.05, axis="x")
 ax.set_xlim((-1, 21))
 ax.axhline(0, c="k", lw=0.8)
-ax.set_yticks(np.arange(-60, 70, 15))
-ax.set_ylim([-45, 60])
+ax.set_yticks(np.arange(-6, 7, 1.5))
+ax.set_ylim([-4.5, 6])
 ax.set_xticks(np.arange(0, 21))
-ax.text(2.45, 39.5, "Total →", va="center", ha="right", fontsize=9)
-ax.text(2.45, -22, "$K_1^*$ →", va="center", ha="right", fontsize=9)
-ax.text(2.45, 23.5, "$K_2^*$ →", va="center", ha="right", fontsize=9)
+ax.text(2.45, 3.95, "Total →", va="center", ha="right", fontsize=9)
+ax.text(2.45, -2.2, "$K_1^*$ →", va="center", ha="right", fontsize=9)
+ax.text(2.45, 2.35, "$K_2^*$ →", va="center", ha="right", fontsize=9)
 fxlabels = [r"$K_0′$", r"$K_\mathrm{B}^*$", "$K_w^*$"]
 for i, fxl in enumerate(fxlabels):
-    ax.text(i, 64, fxl, ha="center", va="bottom")
+    ax.text(i, 6.4, fxl, ha="center", va="bottom")
 for o in okc_order:
     fxlabels.append(str(o))
 ax.set_xticklabels(fxlabels)
-ax.set_ylabel("Contribution to $υ$ / k°C$^{–1}$")
+ax.set_ylabel("Contribution to $υ$ / % °C$^{–1}$")
 ax.tick_params(top=True, labeltop=False)
 brackets = dict(
     xycoords="data",
@@ -169,12 +169,12 @@ brackets = dict(
     ),
     annotation_clip=False,
 )
-anx = -60
+anx = -6
 ax.annotate("", xy=(5, anx), xytext=(12, anx), **brackets)
-ax.text(8.5, anx - 6, '"Mehrbach"', ha="center", va="top", c="xkcd:grey blue")
+ax.text(8.5, anx - 0.6, '"Mehrbach"', ha="center", va="top", c="xkcd:grey blue")
 ax.annotate("", xy=(3, anx), xytext=(4, anx), **brackets)
-ax.text(3.5, anx - 6, "GEOSECS", ha="center", va="top", c="xkcd:grey blue")
+ax.text(3.5, anx - 0.6, "GEOSECS", ha="center", va="top", c="xkcd:grey blue")
 ax.annotate("", xy=(16, anx), xytext=(19, anx), **brackets)
-ax.text(17.5, anx - 6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
+ax.text(17.5, anx - 0.6, "Synthetic", ha="center", va="top", c="xkcd:grey blue")
 fig.tight_layout()
 fig.savefig("figures_final/figure6.png")
