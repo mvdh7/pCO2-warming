@@ -51,7 +51,7 @@ soda_monthly["upsh"] = (
     pwtools.get_eta_h(pwtools.bh_best, soda_monthly.temperature)
 ) * 100
 
-# %% Import OceanSODA-ETZH, full dataset (this takes about )
+# %% Import OceanSODA-ETZH, full dataset (this takes about an hour)
 if not use_quickload:
     soda = xr.open_dataset(
         "/Users/matthew/Documents/data/OceanSODA/0220059/5.5/data/0-data/"
