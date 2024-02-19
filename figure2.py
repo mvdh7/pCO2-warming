@@ -204,4 +204,4 @@ ax.legend(
     loc="upper center", bbox_to_anchor=(0.5, -0.15), edgecolor="k", ncol=1, fontsize=9
 )
 fig.tight_layout()
-fig.savefig("figures_final/figure2.png")
+# fig.savefig("figures_final/figure2.png")

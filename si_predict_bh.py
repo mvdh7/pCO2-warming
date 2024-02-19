@@ -16,6 +16,7 @@ opt_k_carbonic = 10
 opt_total_borate = 1
 use_quickload = True
 
+ex_temperature = np.linspace(-1.8, 35.83, num=50)
 if not use_quickload:
     # Import OceanSODA
     soda = xr.open_dataset(
@@ -44,7 +45,6 @@ if not use_quickload:
     soda_monthly["fCO2"] = (("month", "lat", "lon"), results["fCO2"])
 
     # Fit bh across the globe
-    ex_temperature = np.linspace(-1.8, 35.83, num=50)
     soda_monthly["ex_temperature"] = ("ex_temperature", ex_temperature)
     soda_monthly = soda_monthly.set_coords("ex_temperature")
     ex_fCO2 = np.full((*soda_monthly.dlnfCO2_dT.shape, ex_temperature.size), np.nan)
@@ -190,8 +190,8 @@ soda_monthly["bh_predicted"] = get_bh(
 )
 soda_monthly["bh_diff"] = soda_monthly.bh_predicted - soda_monthly.bh
 
-# Plot the 1:1 fit for the parameterisation
-fig, ax = plt.subplots(dpi=300)
+# %% Plot the 1:1 fit for the parameterisation
+fig, ax = plt.subplots(dpi=300, figsize=(9 / 2.54, 9 / 2.54))
 ax.scatter(
     bh * 1e-3,
     bh_predicted * 1e-3,
@@ -207,17 +207,51 @@ ax.set_ylim(axlims)
 ax.set_aspect(1)
 ax.set_xlabel("$b_h$ fitted to OceanSODA-ETZH / kJ mol$^{–1}$")
 ax.set_ylabel("$b_h$ from parameterisation / kJ mol$^{–1}$")
+ax.text(0, 1.03, "(a)", transform=ax.transAxes)
 fig.tight_layout()
 fig.savefig("figures_si/predict_bh_line.png")
 
+# %% Make table for variance-covariance matrix
+bhcov = bh_fit[1]
+bhtxt = np.array(
+    [
+        [
+            "{:.2e}".format(c)
+            .replace("e+01", "∙10")
+            .replace("e-0", "∙10⁻")
+            .replace("e-", "∙10⁻")
+            .replace("⁻10", "⁻¹⁰")
+            .replace("⁻1", "⁻¹")
+            .replace("⁻2", "⁻²")
+            .replace("⁻3", "⁻³")
+            .replace("⁻4", "⁻⁴")
+            .replace("⁻5", "⁻⁵")
+            .replace("⁻6", "⁻⁶")
+            .replace("⁻7", "⁻⁷")
+            .replace("⁻8", "⁻⁸")
+            .replace("⁻9", "⁻⁹")
+            .replace("-", "−")
+            for c in r
+        ]
+        for r in bhcov
+    ]
+)
+with open("si_predict_bh_covmx.txt", mode="w") as f:
+    for r in bhtxt:
+        for c in r:
+            f.write(c + "\t")
+        f.write("\n")
+
 # %% Plot where bh does and doesn't work so well
 fig, ax = plt.subplots(
-    dpi=300, subplot_kw={"projection": ccrs.Robinson(central_longitude=205)}
+    dpi=300,
+    subplot_kw={"projection": ccrs.Robinson(central_longitude=205)},
+    figsize=(12 / 2.54, 9 / 2.54),
 )
 fm = soda_monthly.bh_diff.mean("month").plot(
     ax=ax,
-    vmin=-400,
-    vmax=400,
+    vmin=-250,
+    vmax=250,
     cmap="RdBu_r",
     add_colorbar=False,
     transform=ccrs.PlateCarree(),
@@ -235,6 +269,7 @@ plt.colorbar(
     fraction=0.05,
     extend="both",
 )
+ax.text(0, 1.06, "(b)", transform=ax.transAxes)
 fig.tight_layout()
 fig.savefig("figures_si/predict_bh_map.png")
 
@@ -350,28 +385,42 @@ ax.set_ylabel("RMSD of $b_h$ fit / µatm")
 ax.set_ylim((0, 5.2))
 
 # %%
-fig, ax = plt.subplots(dpi=300)
-ax.scatter(
+fig, axs = plt.subplots(dpi=300, nrows=2, figsize=(10 / 2.54, 15 / 2.54))
+ax = axs[0]
+fs = ax.scatter(
+    "CO2_dic_pct",
+    "fit_bh_rmsd",
+    data=soda_monthly,
+    s=5,
+    alpha=0.9,
+    c="salinity",
+    edgecolor="none",
+)
+plt.colorbar(fs, label="Pracitcal salinity")
+ax.set_xlabel(r"[($T_\mathrm{C}$ $-$ $T_x$) / $T_\mathrm{C}$] / %")
+ax.text(0, 1.05, "(a)", transform=ax.transAxes)
+
+ax = axs[1]
+fs = ax.scatter(
     "alk_non_carb_pct",
     "fit_bh_rmsd",
     data=soda_monthly,
     s=5,
-    alpha=0.2,
+    alpha=0.9,
     c="salinity",
     edgecolor="none",
 )
-# ax.scatter(
-#     "alk_non_carb_bicarb",
-#     "fit_bh_rmsd",
-#     data=baltic,
-#     s=5,
-#     c="xkcd:strawberry",
-#     alpha=0.5,
-#     edgecolor="none",
-# )
 ax.set_xlabel(r"[($A_\mathrm{T}$ $-$ $A_x$) / $A_\mathrm{T}$] / %")
-ax.set_ylabel("RMSD of $b_h$ fit / µatm")
-ax.set_ylim((0, 5.2))
+plt.colorbar(fs, label="Pracitcal salinity")
+ax.text(0, 1.05, "(b)", transform=ax.transAxes)
+
+for ax in axs:
+    ax.grid(alpha=0.2)
+    ax.set_ylim((0, 5.2))
+    ax.set_ylabel("RMSD of $b_h$ fit / µatm")
+
+fig.tight_layout()
+fig.savefig("figures_si/predict_bh_ax_tx.png")
 
 # %%
 fig, ax = plt.subplots(dpi=300)
@@ -385,22 +434,6 @@ ax.scatter(
     edgecolor="none",
 )
 ax.set_xlabel(r"pH$_\mathrm{T}$")
-ax.set_ylabel("RMSD of $b_h$ fit / µatm")
-ax.set_ylim((0, 5.2))
-
-# %%
-fig, ax = plt.subplots(dpi=300)
-fs = ax.scatter(
-    "CO2_dic_pct",
-    "fit_bh_rmsd",
-    data=soda_monthly,
-    s=5,
-    alpha=0.2,
-    c="salinity",
-    edgecolor="none",
-)
-plt.colorbar(fs)
-ax.set_xlabel(r"{[CO$_2$(aq)] / $T_\mathrm{C}$} / %")
 ax.set_ylabel("RMSD of $b_h$ fit / µatm")
 ax.set_ylim((0, 5.2))
 

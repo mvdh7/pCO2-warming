@@ -211,7 +211,7 @@ ax.fill_betweenx(
     np.min(t93.temperature),
     np.max(t93.temperature),
     facecolor=pwtools.dark,
-    alpha=0.3,
+    alpha=0.2,
     label="Ta93 $t$ range",
 )
 ax.set_ylabel(r"$σ$[exp($Υ$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))

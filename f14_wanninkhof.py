@@ -5,6 +5,7 @@ if pyco2path not in path:
     path.append(pyco2path)
 
 import PyCO2SYS as pyco2
+import itertools
 import pandas as pd
 import numpy as np
 from scipy.optimize import least_squares
@@ -112,6 +113,19 @@ ax.set_xlabel("∆$t$ / °C")
 ax.set_ylabel(r"exp($\Upsilon$) SHOULD BE ITALICISED")
 
 # %% visualise with fitted bh from f06b_soda.py
+markers = itertools.cycle(("o", "^", "s", "v", "D", "<", ">"))
+colours = itertools.cycle(
+    (
+        "xkcd:purple",
+        "xkcd:green",
+        "xkcd:blue",
+        "xkcd:pink",
+        "xkcd:brown",
+        "xkcd:red",
+        "xkcd:teal",
+        "xkcd:orange",
+    )
+)
 
 
 def get_bh(temperature, salinity, pCO2):
@@ -150,8 +164,34 @@ wkf["fCO2_bh_fitted"] = wkf.fCO2_d20 * np.exp(
 wkf["fCO2_bh_fitted_diff"] = wkf.fCO2_bh_fitted - wkf.fCO2_uw
 
 fig, ax = plt.subplots(dpi=300)
-ax.scatter("temperature_diff", "fCO2_bh_fitted_diff", data=wkf, s=20, edgecolor="none")
+for expo in wkf.EXPOCODE.unique():
+    L = wkf.EXPOCODE == expo
+    ax.scatter(
+        "temperature_diff",
+        "fCO2_bh_fitted_diff",
+        data=wkf[L],
+        s=20,
+        edgecolor="none",
+        label="{} ({})".format(expo, L.sum()),
+        c=next(colours),
+        marker=next(markers),
+    )
+LL = (
+    (wkf.EXPOCODE == "33RO20050111")
+    & (wkf.fCO2_bh_fitted_diff > 5)
+    & (wkf.temperature_diff < -12)
+)
+ax.scatter(
+    "temperature_diff",
+    "fCO2_bh_fitted_diff",
+    data=wkf[LL],
+    s=20,
+    edgecolor="none",
+    c="k",
+    label="HIGHLIGHT ({})".format(LL.sum()),
+)
 ax.set_ylim((-50, 50))
+ax.legend(ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.1))
 ax.axhline(0, c="k", lw=0.8)
 
 
