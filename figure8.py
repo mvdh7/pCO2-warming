@@ -66,18 +66,29 @@ if not use_quickload:
                 soda_monthly["fCO2_dt_{}_{}".format(dt, at)]
                 - soda_monthly["fCO2_dt_calc12_{}".format(dt)]
             )
+            soda_monthly["fCO2_dt_{}_{}_diff_pct".format(dt, at)] = (
+                100
+                * soda_monthly["fCO2_dt_{}_{}_diff".format(dt, at)]
+                / soda_monthly["fCO2"]
+            )
 
     # %% Calculate statistics
     rmsd = np.full((len(opt_at), len(dts)), np.nan)
+    rmsd_pct = np.full((len(opt_at), len(dts)), np.nan)
     for i, at in enumerate(opt_at):
         for j, dt in enumerate(dts):
             dtnp = soda_monthly["fCO2_dt_{}_{}_diff".format(dt, at)].to_numpy()
             dtnp = dtnp[~np.isnan(dtnp)]
             rmsd[i, j] = np.sqrt(np.mean(dtnp**2))
+            dtnp_pct = soda_monthly["fCO2_dt_{}_{}_diff_pct".format(dt, at)].to_numpy()
+            dtnp_pct = dtnp_pct[~np.isnan(dtnp_pct)]
+            rmsd_pct[i, j] = np.sqrt(np.mean(dtnp_pct**2))
     np.save("quickload/figure8_rmsd.npy", rmsd)
+    np.save("quickload/figure8_rmsd_pct.npy", rmsd_pct)
 
 else:
     rmsd = np.load("quickload/figure8_rmsd.npy")
+    rmsd_pct = np.load("quickload/figure8_rmsd_pct.npy")
 
 # %% Visualise
 fstyle = {
@@ -119,6 +130,20 @@ ax.set_ylabel(r"RMSD vs. $υ_\mathrm{Lu00}$ / µatm")
 ax.set_xlim((dts.min(), dts.max()))
 ax.set_ylim((0, 13))
 ax.grid(alpha=0.2)
-
 fig.tight_layout()
 fig.savefig("figures_final/figure8.png")
+
+fig, ax = plt.subplots(dpi=300, figsize=(9 / 2.54, 10 / 2.54))
+for i, at in enumerate(opt_at):
+    fy = pchip_interpolate(dts, rmsd_pct[i], fx)
+    ax.plot(fx, fy, **fstyle[at])
+ax.legend(
+    loc="upper center", bbox_to_anchor=(0.5, -0.25), edgecolor="k", ncol=1, fontsize=9
+)
+ax.set_xlabel("∆$t$ / °C")
+ax.set_ylabel(r"RMSD vs. $υ_\mathrm{Lu00}$ / %")
+ax.set_xlim((dts.min(), dts.max()))
+ax.set_ylim((0, 4))
+ax.grid(alpha=0.2)
+fig.tight_layout()
+fig.savefig("figures_final/figure8_pct.png")

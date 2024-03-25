@@ -73,6 +73,22 @@ for i, at in enumerate(opt_at):
             np.sqrt((soda_monthly["fCO2_dt_{}_diff".format(at)] ** 2).mean().data)
         )
     )
+    print(
+        "RMSD bias = {:.2f} %".format(
+            np.sqrt(
+                (
+                    (
+                        100
+                        * soda_monthly["fCO2_dt_{}_diff".format(at)]
+                        / soda_monthly["fCO2".format(at)]
+                    )
+                    ** 2
+                )
+                .mean()
+                .data
+            )
+        )
+    )
     print(" 2.5% = {:.2f} µatm".format(np.percentile(dtnp, 2.5)))
     print("97.5% =  {:.2f} µatm".format(np.percentile(dtnp, 97.5)))
     print()
