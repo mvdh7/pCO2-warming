@@ -17,7 +17,13 @@ tak93 = dict(
     total_silicate=0,
     total_phosphate=0,
 )
+quadratic = np.array([-0.435e-4, 4.33e-2])
 
+# Get RMSDs for fits
+fit_linear = np.polyfit(temperature, np.log(pCO2), 1)
+fit_quadratic = np.polyfit(temperature, np.log(pCO2), 2)
+rmsd_linear = np.sqrt(np.mean((np.exp(np.polyval(fit_linear, temperature)) - pCO2)**2))
+rmsd_quadratic = np.sqrt(np.mean((np.exp(np.polyval(fit_quadratic, temperature)) - pCO2)**2))
 
 def get_alkalinity_old(opt_k_carbonic, opt_total_borate):
     """Determine alkalinity in the experiment as the mean alkalinity calculated from DIC

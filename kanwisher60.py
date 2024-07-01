@@ -1,6 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
-import takahashi93 as t93
+
+# import takahashi93 as t93
+import pwtools
 
 # Data extracted from Kanwisher (1960) Fig. 2 using plotdigitizer.com
 temperature = np.array(
@@ -27,12 +29,23 @@ pCO2 = np.array(
 )
 fit = np.polyfit(temperature, np.log(pCO2), 1)
 
+pCO2_fit = np.exp(fit[0] * temperature + fit[1])
+fit_vh = pwtools.fit_vh_curve(temperature, np.log(pCO2))
+pCO2_vh = np.exp(pwtools.get_lnfCO2_vh(fit_vh[0], temperature))
+
+fx = np.linspace(np.min(temperature), np.max(temperature))
+fy = np.exp(pwtools.get_lnfCO2_vh(fit_vh[0], fx))
+fy_linear = fit[0] * fx + fit[1]
+
 fig, ax = plt.subplots(dpi=300)
-ax.scatter(temperature, np.log(pCO2))
-ax.scatter(t93.temperature, np.log(t93.pCO2))
-ax.plot(temperature, np.polyval(fit, temperature))
+ax.scatter(temperature, pCO2 - pCO2_fit)
+ax.plot(fx, fy - fy_linear)
+
+# ax.scatter(t93.temperature, np.log(t93.pCO2))
+# ax.plot(temperature, np.polyval(fit, temperature))
 ax.set_xlabel("Temperature / °C")
 ax.set_ylabel("ln($p$CO$_2$ / µatm)")
+# ax.set_ylim((-3, 3))
 
 
 # Kanwisher data for Fig. 1 --- plot k60_temperature vs (k60_pCO2 - k60_norm)

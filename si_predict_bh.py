@@ -142,15 +142,15 @@ soda_monthly["alk_non_carb_pct"] = (
 
 
 # %% Make the parameterisation
-def get_bh(t_s_fCO2, c, t, tt, s, ss, f, ff, ts, tf, sf):
+def get_bh(t_s_fCO2, c, t, s, f, tt, ss, ff, ts, tf, sf):
     temperature, salinity, fCO2 = t_s_fCO2
     return (
         c
         + t * temperature
-        + tt * temperature**2
         + s * salinity
-        + ss * salinity**2
         + f * fCO2
+        + tt * temperature**2
+        + ss * salinity**2
         + ff * fCO2**2
         + ts * temperature * salinity
         + tf * temperature * fCO2
@@ -173,15 +173,15 @@ bh_coeffs = bh_fit[0]
 # bh_coeffs = np.array(
 #     [
 #         3.13184463e04,
-#         1.39487529e02,
-#         -1.21087624e00,
-#         -4.22484243e00,
-#         -6.52212406e-01,
-#         -1.69522191e01,
-#         -5.47585838e-04,
-#         -3.02071783e00,
-#         1.66972942e-01,
-#         3.09654019e-01,
+#         1.39487523e02,
+#         -4.22486270e00,
+#         -1.69522169e01,
+#         -1.21087626e00,
+#         -6.52212238e-01,
+#         -5.47590694e-04,
+#         -3.02071787e00,
+#         1.66972963e-01,
+#         3.09654047e-01,
 #     ]
 # )
 bh_predicted = get_bh(t_s_fCO2, *bh_coeffs)
@@ -189,6 +189,59 @@ soda_monthly["bh_predicted"] = get_bh(
     (soda_monthly.temperature, soda_monthly.salinity, soda_monthly.fCO2), *bh_coeffs
 )
 soda_monthly["bh_diff"] = soda_monthly.bh_predicted - soda_monthly.bh
+
+# Standardise the coefficients for comparison
+# https://blog.minitab.com/en/adventures-in-statistics-2/how-to-identify-the-most-important-predictor-variables-in-regression-models
+predictors = np.array(
+    [
+        temperature,
+        salinity,
+        fCO2,
+        temperature**2,
+        salinity**2,
+        fCO2**2,
+        temperature * salinity,
+        temperature * fCO2,
+        salinity * fCO2,
+    ]
+)
+predictors_mean = np.mean(predictors, axis=1)
+predictors_std = np.std(predictors, axis=1)
+predictors_normed = (predictors - np.vstack(predictors_mean)) / np.vstack(
+    predictors_std
+)
+
+
+def get_bh_normed(predictors_normed, c, t, s, f, tt, ss, ff, ts, tf, sf):
+    (
+        temperature,
+        salinity,
+        fCO2,
+        temperature_2,
+        salinity_2,
+        fCO2_2,
+        temperature_salinity,
+        temperature_fCO2,
+        salinity_fCO2,
+    ) = predictors_normed
+    return (
+        c
+        + t * temperature
+        + s * salinity
+        + f * fCO2
+        + tt * temperature_2
+        + ss * salinity_2
+        + ff * fCO2_2
+        + ts * temperature_salinity
+        + tf * temperature_fCO2
+        + sf * salinity_fCO2
+    )
+
+
+bh_fit_normed = curve_fit(
+    get_bh_normed, predictors_normed, bh, p0=(30000, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+)
+bh_coeffs_normed = bh_fit_normed[0]
 
 # %% Plot the 1:1 fit for the parameterisation
 fig, ax = plt.subplots(dpi=300, figsize=(9 / 2.54, 9 / 2.54))
