@@ -20,8 +20,10 @@ results = pyco2.sys(
     par1_type=1,
     par2_type=2,
     temperature=temperatures,
-    opt_k_carbonic=8,
-    salinity=0,
+    # opt_k_carbonic=8,
+    # salinity=0,
+    opt_k_carbonic=10,
+    salinity=35,
 )
 
 alkalinity_x = results["HCO3"] + 2 * results["CO3"]
