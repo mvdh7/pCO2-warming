@@ -206,4 +206,4 @@ for ax in axs:
     ax.grid(alpha=0.2)
 
 fig.tight_layout()
-fig.savefig("figures_final/figure1.png")
+# fig.savefig("figures_final/figure1.png")
