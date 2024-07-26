@@ -31,6 +31,252 @@ fit_bh_rmsd = np.sqrt(np.mean((fCO2_from_bhch - ex_fCO2) ** 2, axis=3))
 soda_monthly["fit_bh_rmsd"] = (("month", "lat", "lon"), fit_bh_rmsd)
 soda_monthly["dic_ta"] = soda_monthly.dic / soda_monthly.talk
 
+# %% Calculate non-carbonate alkalinity
+results = pyco2.sys(
+    par1=soda_monthly.talk.data,
+    par1_type=1,
+    par2=soda_monthly.dic.data,
+    par2_type=2,
+    salinity=soda_monthly.salinity.data,
+    temperature=soda_monthly.temperature.data,
+    opt_k_carbonic=10,
+    opt_total_borate=1,
+)
+# %%
+soda_monthly["alk_carb_bicarb"] = (
+    ("month", "lat", "lon"),
+    results["HCO3"] + 2 * results["CO3"],
+)
+soda_monthly["alk_non_carb_bicarb"] = soda_monthly.talk - soda_monthly.alk_carb_bicarb
+for v in [
+    # "pH",
+    "CO2",
+    # "alkalinity_borate",
+    # "isocapnic_quotient",
+    # "beta_dic",
+    # "gamma_dic",
+    # "beta_alk",
+    # "gamma_alk",
+    # "revelle_factor",
+    "HCO3",
+    "CO3",
+]:
+    soda_monthly[v] = (("month", "lat", "lon"), results[v])
+soda_monthly["CO2_dic_pct"] = 100 * soda_monthly.CO2 / soda_monthly.dic
+soda_monthly["alk_non_carb_pct"] = (
+    100 * soda_monthly.alk_non_carb_bicarb / soda_monthly.talk
+)
+soda_monthly["alk_approx_error"] = soda_monthly.alk_carb_bicarb - soda_monthly.talk
+soda_monthly["dic_approx_error"] = (
+    soda_monthly.HCO3 + soda_monthly.CO3 - soda_monthly.dic
+)
+soda_monthly["alk_approx_error_pct"] = (
+    100 * soda_monthly.alk_approx_error / soda_monthly.talk
+)
+soda_monthly["dic_approx_error_pct"] = (
+    100 * soda_monthly.dic_approx_error / soda_monthly.dic
+)
+
+# %% Draw figure
+show_highlights = False
+show_cutoff_rmsd = True
+
+cutoff_dic_ta = 0.9
+percent_under_cutoff_dic_ta = (
+    100
+    * (soda_monthly.dic_ta < cutoff_dic_ta).sum()
+    / soda_monthly.dic_ta.notnull().sum()
+).data
+print(
+    "Over {:.0f}% of all data have DIC/TA < {}.  These are the purple points in (a).".format(
+        np.floor(percent_under_cutoff_dic_ta), cutoff_dic_ta
+    )
+)
+cutoff_rmsd = 1
+percent_under_cutoff_rmsd = (
+    100
+    * (soda_monthly.fit_bh_rmsd < cutoff_rmsd).sum()
+    / soda_monthly.dic_ta.notnull().sum()
+).data
+print(
+    "Over {:.0f}% of all data have RMSD < {} µatm.".format(
+        np.floor(percent_under_cutoff_rmsd), cutoff_rmsd
+    )
+)
+
+sm_shape = list(soda_monthly.ex_fCO2.data.shape)
+sm_shape[-1] = 1
+lo_temperature = np.tile(ex_temperature, sm_shape)
+lo_diff = soda_monthly.ex_fCO2.data - soda_monthly.fCO2_from_bhch.data
+# lo_diff = soda_monthly.HCO3.data
+lo_dic_ta = soda_monthly.dic_ta.data
+lo_colour = soda_monthly.dic_ta.data
+lo_rmsd = soda_monthly.fit_bh_rmsd.data
+L = lo_dic_ta < 9
+lo_temperature = lo_temperature[L]
+lo_diff = lo_diff[L]
+lo_dic_ta = lo_dic_ta[L]
+lo_colour = lo_colour[L]
+lo_rmsd = lo_rmsd[L]
+
+v_temperature = lo_temperature[0]
+v_diff_cutoff_min = np.full_like(v_temperature, np.nan)
+v_diff_cutoff_max = np.full_like(v_temperature, np.nan)
+for vt in range(len(v_temperature)):
+    # v_diff_cutoff_min[t] = np.min(lo_diff[lo_dic_ta < cutoff_dic_ta, t])
+    # v_diff_cutoff_max[t] = np.max(lo_diff[lo_dic_ta < cutoff_dic_ta, t])
+    v_diff_cutoff_min[vt] = np.min(lo_diff[lo_rmsd < 1, vt])
+    v_diff_cutoff_max[vt] = np.max(lo_diff[lo_rmsd < 1, vt])
+
+ix_lo = 47030
+ix_hi = 111430
+
+daxlim = (0.81, 1.015)
+
+fig, axs = plt.subplots(
+    dpi=300, figsize=(11 / 2.54, 18 / 2.54), nrows=3, layout="constrained"
+)
+
+ax = axs[0]
+coarsen = 5  # 5 for final figure (~90 seconds), 50 for quick testing
+fx = lo_temperature[::coarsen].ravel()
+fy = lo_diff[::coarsen].ravel()
+fc = np.tile(lo_colour, (50, 1)).T[::coarsen].ravel()
+fix = np.argsort(fc)
+fx = fx[fix][::-1]
+fy = fy[fix][::-1]
+fc = fc[fix][::-1]
+fs = ax.scatter(fx, fy, c=fc, s=8, cmap="plasma")
+plt.colorbar(fs, label=r"$T_\mathrm{C}$ / $A_\mathrm{T}$", location="right")
+if show_highlights:
+    ax.plot(v_temperature, lo_diff[ix_lo, :], c="xkcd:bright pink", lw=1.2, ls="--")
+    ax.plot(v_temperature, lo_diff[ix_hi, :], c="xkcd:bright pink", lw=1.2)
+if show_cutoff_rmsd:
+    offset = 0.2
+    # ^ this shifts the lines so they fall at the edges of the points to be enclosed
+    #   instead of running through the middle of them.  It does not invalidate the
+    #   statements made about the lines (by increasing the space between them,
+    #   even more than 97% of the data will be enclosed)
+    ax.plot(
+        v_temperature,
+        v_diff_cutoff_min - offset,
+        c="xkcd:aqua blue",
+        lw=1.5,
+        alpha=0.8,
+    )
+    ax.plot(
+        v_temperature,
+        v_diff_cutoff_max + offset,
+        c="xkcd:aqua blue",
+        lw=1.5,
+        alpha=0.8,
+    )
+# M = (fc >= 0.9365) & (fc <= 0.9366)
+# ax.scatter(fx[M], fy[M], c='xkcd:strawberry')
+ax.axhline(c="k", lw=0.8)
+ax.set_xlabel("Temperature / °C")
+# ax.set_ylabel(
+#     "[{sp}{f}CO$_2$($υ_p$) $-$ {f}CO$_2$".format(f=pwtools.f, sp=pwtools.thinspace)
+#     + r"($A_\mathrm{T}$, $T_\mathrm{C}$)]" + "\n/ µatm"
+# )
+ax.set_ylabel("Error in {}CO$_2$($υ_p$) / µatm".format(pwtools.f))
+ax.text(0, 1.05, "(a)", transform=ax.transAxes)
+ax.set_ylim(-12, 6)
+ax.set_yticks(range(-12, 9, 3))
+
+ax = axs[1]
+fx2 = soda_monthly.dic_ta.data
+fy2 = soda_monthly.fit_bh_rmsd.data
+fc2 = soda_monthly.salinity.data
+L2 = ~np.isnan(fy2)
+fx2, fy2, fc2 = fx2[L2], fy2[L2], fc2[L2]
+fix2 = np.argsort(fc2)
+fx2 = fx2[fix2][::-1]
+fy2 = fy2[fix2][::-1]
+fc2 = fc2[fix2][::-1]
+fs2 = ax.scatter(
+    fx2,
+    fy2,
+    s=5,
+    c=fc2,
+    edgecolor="none",
+    cmap="viridis",
+)
+if show_highlights:
+    ax.scatter(lo_dic_ta[ix_hi], lo_rmsd[ix_hi], c="xkcd:bright pink", marker="s", s=20)
+    ax.scatter(
+        lo_dic_ta[ix_lo],
+        lo_rmsd[ix_lo],
+        c="none",
+        marker="s",
+        s=20,
+        edgecolor="xkcd:bright pink",
+    )
+if show_cutoff_rmsd:
+    ax.axhline(cutoff_rmsd, c="xkcd:aqua blue", lw=1.5, alpha=0.8)
+ax.set_xlabel(r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
+ax.set_ylabel("RMSD of $b_h$ fit / µatm")
+ax.set_ylim(0, 5.3)
+ax.set_xlim(daxlim)
+ax.text(0, 1.05, "(b)", transform=ax.transAxes)
+plt.colorbar(fs2, label="Practical salinity", location="right", ticks=(10, 20, 30, 39))
+
+ax = axs[2]
+ax.scatter(
+    soda_monthly.dic_ta.values.ravel(),
+    soda_monthly.dic_approx_error_pct.values.ravel(),
+    s=8,
+    alpha=0.2,
+    edgecolor="none",
+    # label=r"$T_\mathrm{C}$",
+    c="xkcd:dark",
+)
+ax.scatter(
+    soda_monthly.dic_ta.values.ravel(),
+    soda_monthly.alk_approx_error_pct.values.ravel(),
+    s=8,
+    alpha=0.2,
+    edgecolor="none",
+    # label=r"$A_\mathrm{T}$",
+    c="xkcd:cloudy blue",
+)
+ax.scatter(
+    1,
+    1,
+    s=15,
+    edgecolor="none",
+    label=r"$T_x - T_\mathrm{C}$",
+    c="xkcd:dark",
+    alpha=0.8,
+)
+ax.scatter(
+    1,
+    1,
+    s=15,
+    edgecolor="none",
+    label=r"$A_x - A_\mathrm{T}$",
+    c="xkcd:cloudy blue",
+    alpha=0.8,
+)
+ax.set_xlim(daxlim)
+ax.set_ylim(-6, 0)
+ax.set_xlabel(r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
+ax.set_ylabel("Error in approximation / %")
+ax.text(0, 1.05, "(c)", transform=ax.transAxes)
+ax.legend()
+
+for ax in axs:
+    ax.grid(alpha=0.2)
+
+# ax.set_ylim([-10.5, 6.5])
+# ax.set_title(r"$T_\mathrm{C}$ / $A_\mathrm{T}$ < 0.9")
+# fig.tight_layout()
+# if show_highlights:
+#     fig.savefig("figures_final/figure3_hl.png")
+# else:
+#     fig.savefig("figures_final/figure3.png")
+fig.savefig("figures_final/figure3_1.png")
+
 # %% Do pure water comparison
 # rng = np.random.default_rng(7)
 t = np.reshape(ex_temperature, (50, 1, 1))
@@ -79,7 +325,7 @@ for r in range(dic.shape[0]):
 pvar = np.log10(pwfit_rmsd_norm * 650)
 
 fig, ax = plt.subplots(dpi=300)
-vmin = 1
+vmin = 0
 vmax = 2
 fc = ax.contourf(alkalinity, dic, pvar, 1024, cmap="turbo", vmin=vmin, vmax=vmax)
 
@@ -291,150 +537,3 @@ ax.plot(v_dar, np.log10(v_pwfit_rmsd))
 ax.axhline(1)
 ax.set_xlim(0.8, 1.2)
 ax.axvline(0, c="k", lw=0.8)
-
-# %% Draw figure
-show_highlights = False
-show_cutoff_rmsd = True
-
-cutoff_dic_ta = 0.9
-percent_under_cutoff_dic_ta = (
-    100
-    * (soda_monthly.dic_ta < cutoff_dic_ta).sum()
-    / soda_monthly.dic_ta.notnull().sum()
-).data
-print(
-    "Over {:.0f}% of all data have DIC/TA < {}.  These are the purple points in (a).".format(
-        np.floor(percent_under_cutoff_dic_ta), cutoff_dic_ta
-    )
-)
-cutoff_rmsd = 1
-percent_under_cutoff_rmsd = (
-    100
-    * (soda_monthly.fit_bh_rmsd < cutoff_rmsd).sum()
-    / soda_monthly.dic_ta.notnull().sum()
-).data
-print(
-    "Over {:.0f}% of all data have RMSD < {} µatm.".format(
-        np.floor(percent_under_cutoff_rmsd), cutoff_rmsd
-    )
-)
-
-sm_shape = list(soda_monthly.ex_fCO2.data.shape)
-sm_shape[-1] = 1
-lo_temperature = np.tile(ex_temperature, sm_shape)
-lo_diff = soda_monthly.ex_fCO2.data - soda_monthly.fCO2_from_bhch.data
-# lo_diff = soda_monthly.HCO3.data
-lo_dic_ta = soda_monthly.dic_ta.data
-lo_colour = soda_monthly.dic_ta.data
-lo_rmsd = soda_monthly.fit_bh_rmsd.data
-L = lo_dic_ta < 9
-lo_temperature = lo_temperature[L]
-lo_diff = lo_diff[L]
-lo_dic_ta = lo_dic_ta[L]
-lo_colour = lo_colour[L]
-lo_rmsd = lo_rmsd[L]
-
-v_temperature = lo_temperature[0]
-v_diff_cutoff_min = np.full_like(v_temperature, np.nan)
-v_diff_cutoff_max = np.full_like(v_temperature, np.nan)
-for vt in range(len(v_temperature)):
-    # v_diff_cutoff_min[t] = np.min(lo_diff[lo_dic_ta < cutoff_dic_ta, t])
-    # v_diff_cutoff_max[t] = np.max(lo_diff[lo_dic_ta < cutoff_dic_ta, t])
-    v_diff_cutoff_min[t] = np.min(lo_diff[lo_rmsd < 1, vt])
-    v_diff_cutoff_max[t] = np.max(lo_diff[lo_rmsd < 1, vt])
-
-ix_lo = 47030
-ix_hi = 111430
-
-fig, axs = plt.subplots(dpi=300, figsize=(17.4 / 2.54, 10 / 2.54), ncols=2)
-
-ax = axs[0]
-coarsen = 500  # 5 for final figure (~90 seconds), 50 for quick testing
-fx = lo_temperature[::coarsen].ravel()
-fy = lo_diff[::coarsen].ravel()
-fc = np.tile(lo_colour, (50, 1)).T[::coarsen].ravel()
-fix = np.argsort(fc)
-fx = fx[fix][::-1]
-fy = fy[fix][::-1]
-fc = fc[fix][::-1]
-fs = ax.scatter(fx, fy, c=fc, s=8, cmap="plasma")
-plt.colorbar(fs, label=r"$T_\mathrm{C}$ / $A_\mathrm{T}$", location="top", shrink=0.7)
-if show_highlights:
-    ax.plot(v_temperature, lo_diff[ix_lo, :], c="xkcd:bright pink", lw=1.2, ls="--")
-    ax.plot(v_temperature, lo_diff[ix_hi, :], c="xkcd:bright pink", lw=1.2)
-if show_cutoff_rmsd:
-    offset = 0.15
-    # ^ this shifts the lines so they fall at the edges of the points to be enclosed
-    #   instead of running through the middle of them.  It does not invalidate the
-    #   statements made about theh lines (by increasing the space between them,
-    #   even more than 97% of the data will be enclosed)
-    ax.plot(
-        v_temperature,
-        v_diff_cutoff_min - offset,
-        c="xkcd:aqua blue",
-        lw=1.5,
-        alpha=0.8,
-    )
-    ax.plot(
-        v_temperature,
-        v_diff_cutoff_max + offset,
-        c="xkcd:aqua blue",
-        lw=1.5,
-        alpha=0.8,
-    )
-# M = (fc >= 0.9365) & (fc <= 0.9366)
-# ax.scatter(fx[M], fy[M], c='xkcd:strawberry')
-ax.axhline(c="k", lw=0.8)
-ax.set_xlabel("Temperature / °C")
-ax.set_ylabel(
-    "[{sp}{f}CO$_2$($υ_p$) $-$ {f}CO$_2$".format(f=pwtools.f, sp=pwtools.thinspace)
-    + r"($A_\mathrm{T}$, $T_\mathrm{C}$)] / µatm"
-)
-ax.text(0, 1.06, "(a)", transform=ax.transAxes)
-
-ax = axs[1]
-fx2 = soda_monthly.dic_ta.data
-fy2 = soda_monthly.fit_bh_rmsd.data
-fc2 = soda_monthly.salinity.data
-L2 = ~np.isnan(fy2)
-fx2, fy2, fc2 = fx2[L2], fy2[L2], fc2[L2]
-fix2 = np.argsort(fc2)
-fx2 = fx2[fix2][::-1]
-fy2 = fy2[fix2][::-1]
-fc2 = fc2[fix2][::-1]
-fs2 = ax.scatter(
-    fx2,
-    fy2,
-    s=5,
-    c=fc2,
-    edgecolor="none",
-    cmap="viridis",
-)
-if show_highlights:
-    ax.scatter(lo_dic_ta[ix_hi], lo_rmsd[ix_hi], c="xkcd:bright pink", marker="s", s=20)
-    ax.scatter(
-        lo_dic_ta[ix_lo],
-        lo_rmsd[ix_lo],
-        c="none",
-        marker="s",
-        s=20,
-        edgecolor="xkcd:bright pink",
-    )
-if show_cutoff_rmsd:
-    ax.axhline(cutoff_rmsd, c="xkcd:aqua blue", lw=1.5, alpha=0.8)
-ax.set_xlabel(r"$T_\mathrm{C}$ / $A_\mathrm{T}$")
-ax.set_ylabel("RMSD of $b_h$ fit / µatm")
-ax.set_ylim((0, 5.2))
-ax.text(0, 1.06, "(b)", transform=ax.transAxes)
-plt.colorbar(fs2, label="Practical salinity", location="top", shrink=0.7)
-
-for ax in axs:
-    ax.grid(alpha=0.2)
-
-# ax.set_ylim([-10.5, 6.5])
-# ax.set_title(r"$T_\mathrm{C}$ / $A_\mathrm{T}$ < 0.9")
-fig.tight_layout()
-# if show_highlights:
-#     fig.savefig("figures_final/figure3_hl.png")
-# else:
-#     fig.savefig("figures_final/figure3.png")

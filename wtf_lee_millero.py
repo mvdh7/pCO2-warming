@@ -44,6 +44,39 @@ alkalinity = 2320.8
 dic = 1966.8
 salinity = 34.95
 ln_fCO2 = np.log(fCO2)
+lm95 = dict(
+    salinity=salinity,
+    total_silicate=0,
+    total_phosphate=0,
+)
+
+
+def get_alkalinity(opt_k_carbonic, opt_total_borate):
+    """Determine alkalinity in the experiment as the best-fitting alkalinity to match
+    all the experimental fCO2 points.
+    """
+
+    def fCO2_from_alkalinity(alkalinity):
+        return pyco2.sys(
+            par1=dic,
+            par1_type=2,
+            par2=alkalinity,
+            par2_type=1,
+            temperature=temperature,
+            opt_k_carbonic=opt_k_carbonic,
+            opt_total_borate=opt_total_borate,
+            **lm95,
+        )["fCO2"]
+
+    def _lsqfun_fCO2_from_alkalinity(alkalinity, fCO2):
+        return fCO2_from_alkalinity(alkalinity) - fCO2
+
+    opt_result = least_squares(_lsqfun_fCO2_from_alkalinity, [2300], args=(fCO2,))
+    return opt_result["x"][0], np.sqrt(np.mean(opt_result.fun**2))
+
+
+alkalinity_fitted = get_alkalinity(10, 1)
+# alkalinity = alkalinity_fitted[0]
 
 # Calculate fCO2 from DIC and alkalinity with PyCO2SYS
 opt_k_carbonic = 1
@@ -65,8 +98,22 @@ print(
     )
 )
 
+# Calculate with Lueker et al. (2000)
+r10 = pyco2.sys(
+    par1=alkalinity,
+    par2=dic,
+    par1_type=1,
+    par2_type=2,
+    salinity=salinity,
+    temperature=temperature,
+    opt_k_carbonic=10,
+    opt_total_borate=1,
+)
+r10_fCO2 = r10["fCO2"]
+r10_rmsd = rmsd(r10_fCO2)
+
 # Prepare for plotting
-fx = np.linspace(np.min(temperature), np.max(temperature))
+fx = np.linspace(0, 50, num=500)
 rx = pyco2.sys(
     par1=alkalinity,
     par2=dic,
@@ -78,6 +125,18 @@ rx = pyco2.sys(
     opt_total_borate=1,
 )
 ry = rx["fCO2"]
+
+rx10 = pyco2.sys(
+    par1=alkalinity,
+    par2=dic,
+    par1_type=1,
+    par2_type=2,
+    salinity=salinity,
+    temperature=fx,
+    opt_k_carbonic=10,
+    opt_total_borate=1,
+)
+ry10 = rx10["fCO2"]
 
 # Linear regression with own slope and intercept
 linear_full = linregress(temperature, ln_fCO2)
@@ -130,12 +189,27 @@ linear_T93_rmsd = rmsd(linear_T93_fCO2)
 fy_T93 = np.exp(linear_T93_intercept + fx * 0.0423)
 print("That's virtually identical to using the T93 value of 4.23%/°C directly.\n")
 
+# Find bh based on the DIC and alkalinity reported
+ex_temperature = np.linspace(-1.8, 35.83, num=50)
+ex_results = pyco2.sys(
+    par1=alkalinity,
+    par2=dic,
+    par1_type=1,
+    par2_type=2,
+    temperature=ex_temperature,
+    **lm95,
+)
+ex_fCO2 = ex_results["fCO2"]
+fit_bh, fit_ch = pwtools.fit_vh_curve(ex_temperature, ex_fCO2)[0]
+
 curve_vh = pwtools.fit_vh_curve(temperature, fCO2)
 vh_fCO2 = np.exp(pwtools.get_lnfCO2_vh(curve_vh[0], temperature))
 vh_rmsd = rmsd(vh_fCO2)
 fy_vh = np.exp(pwtools.get_lnfCO2_vh(curve_vh[0], fx))
 print("Fitting the 1/tK curve gives a bh of {:.0f} J/mol,".format(curve_vh[0][0]))
-print("with and RMSD of {:.1f} µatm.\n".format(vh_rmsd))
+print("with an RMSD of {:.1f} µatm.\n".format(vh_rmsd))
+print("Based on the DIC and alkalinity reported by LM95, with K1/K2 of Lu00,")
+print("we would have expected a bh of {:.0f} J/mol.\n".format(fit_bh))
 
 # fy = np.exp(pwtools.get_lnfCO2_vh(curve_vh[0], fx))
 # fy_linear = np.exp(lr.intercept + fx * lr.slope)
@@ -178,24 +252,104 @@ print(
 fnorm = fy_full
 fnorm_fCO2 = linear_full_fCO2
 
-fig, ax = plt.subplots(dpi=300)
-ax.scatter(temperature, fCO2 - fnorm_fCO2)
+style_linear = dict(
+    c=pwtools.dark,
+    label="$υ_l$ (Ta93, linear)",
+    # alpha=0.9,
+    lw=1.5,
+)
+style_poly = dict(
+    c=pwtools.dark,
+    label="$υ_q$ (Ta93, quadratic)",
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (6, 2)),
+    zorder=2,
+)
+style_pyco2_1 = dict(
+    c=pwtools.pink,
+    label=r"$υ_\mathrm{Ro93}$ (PyCO2SYS, Ro93)",
+    # alpha=0.8,
+    lw=1.5,
+    ls="-",
+    zorder=3,
+)
+style_pyco2_10 = dict(
+    c=pwtools.pink,
+    label=r"$υ_\mathrm{Lu00}$ (PyCO2SYS, Lu00)",
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (2,)),
+    zorder=3,
+)
+style_vh = dict(
+    c=pwtools.green,
+    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (3, 1)),
+    zorder=1,
+)
+style_linear_LM95 = dict(
+    c=pwtools.green,
+    label="$υ_l$ (LM95, linear refitted)",
+    # alpha=0.9,
+    ls=(0, (1, 2)),
+    lw=2,
+)
+style_poly_LM95 = dict(
+    c=pwtools.green,
+    label="$υ_q$ (LM95, quadratic)",
+    # alpha=0.8,
+    lw=1.5,
+    ls=(0, (6, 2)),
+    zorder=2,
+)
+
+
+fig, ax = plt.subplots(dpi=300, figsize=(12 / 2.54, 14 / 2.54))
+ax.errorbar(
+    temperature,
+    fCO2 - fnorm_fCO2,
+    3,
+    c=pwtools.dark,
+    ls="none",
+    zorder=-1,
+)
+ax.scatter(
+    temperature,
+    fCO2 - fnorm_fCO2,
+    c=pwtools.dark,
+    # label="LM95 measured",
+    s=50,
+    zorder=0,
+    # alpha=0.9,
+    edgecolor="none",
+)
+# ax.scatter(temperature, fCO2 - fnorm_fCO2)
 # ax.plot(fx, fy_full - fnorm, label="LM95 refit to ln(fCO2)")
-ax.plot(fx, fy_T93 - fnorm, label="T93 linear")
-ax.plot(fx, fy_LM95 - fnorm, label="LM95 refit to fCO2")
-ax.plot(fx, fy_vh - fnorm, label="bh refit to LM95")
-ax.plot(fx, fy_qint - fnorm, label="T93 quadratic")
-ax.plot(fx, fy_qfit - fnorm, label="LM95 quadratic")
-ax.plot(fx, ry - fnorm, label="PyCO2SYS okc={}".format(opt_k_carbonic))
+ax.plot(fx, fy_T93 - fnorm, **style_linear)
+ax.plot(fx, fy_qint - fnorm, **style_poly)
+ax.plot(fx, ry - fnorm, **style_pyco2_1)
+ax.plot(fx, ry10 - fnorm, **style_pyco2_10)
 ax.axhline(0, c="k", lw=0.8)
+ax.plot(fx, fy_LM95 - fnorm, **style_linear_LM95)
+ax.plot(fx, fy_qfit - fnorm, **style_poly_LM95)
+ax.plot(fx, fy_vh - fnorm, **style_vh)
 ax.set_xlabel("Temperature / °C")
 ax.set_ylabel(
     "[{sp}{f}CO$_2$ $-$ {f}CO$_2$($υ_l$)] / µatm".format(
         sp=pwtools.thinspace, f=pwtools.f
     )
 )
-ax.set_ylim((-12, 12))
-ax.legend()
+ax.set_xlim(3.5, 36.5)
+ax.set_ylim((-22, 12))
+ax.legend(
+    loc="upper center", bbox_to_anchor=(0.42, -0.15), edgecolor="k", ncol=2, fontsize=9
+)
+ax.grid(alpha=0.2)
+fig.tight_layout()
+fig.savefig("figures_final/extra.png")
 
 # %% WT correction
 xCO2_headspace = fCO2 * 1e-6

@@ -30,6 +30,20 @@ rmsd_quadratic = np.sqrt(
 )
 
 
+# Fit minimising residuals in pCO2, not ln(pCO2)
+def _get_lnpCO2(coeffs):
+    slope, intercept = coeffs
+    return slope * temperature + intercept
+
+
+def _lsqfun_get_lnpCO2(coeffs):
+    return np.exp(_get_lnpCO2(coeffs)) - pCO2
+    # return _get_lnpCO2(coeffs) - np.log(pCO2)
+
+
+optr_linear = least_squares(_lsqfun_get_lnpCO2, [1, 0])
+
+
 def get_alkalinity_old(opt_k_carbonic, opt_total_borate):
     """Determine alkalinity in the experiment as the mean alkalinity calculated from DIC
     and pCO2 across all measurement points.

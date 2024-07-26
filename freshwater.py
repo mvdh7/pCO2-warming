@@ -20,10 +20,10 @@ results = pyco2.sys(
     par1_type=1,
     par2_type=2,
     temperature=temperatures,
-    # opt_k_carbonic=8,
-    # salinity=0,
-    opt_k_carbonic=10,
-    salinity=35,
+    opt_k_carbonic=8,
+    salinity=0,
+    # opt_k_carbonic=10,
+    # salinity=35,
 )
 
 alkalinity_x = results["HCO3"] + 2 * results["CO3"]
@@ -60,6 +60,17 @@ for i, temperature in enumerate(temperatures):
     )
 ax.set_ylabel("{f}CO$_2$ / µatm".format(f=pwtools.f))
 ax.text(0, 1.05, "(a)", transform=ax.transAxes)
+cax = ax.inset_axes([0.06, 0.87, 0.4, 0.08])
+cb = fig.colorbar(
+    mpl.cm.ScalarMappable(
+        norm=mpl.colors.Normalize(np.min(temperatures), np.max(temperatures)),
+        cmap="turbo",
+    ),
+    cax=cax,
+    orientation="horizontal",
+    label="Temperature / °C",
+    ticks=[-1, 11, 23, 35],
+)
 
 ax = axs[1]
 for i, temperature in enumerate(temperatures):
@@ -76,10 +87,11 @@ for i, temperature in enumerate(temperatures):
         c=mpl.cm.turbo((temperature + 1) / 37),
         zorder=10,
     )
-ax.set_ylabel("$V_x$ – $V$ / µmol kg$^{-1}$")
+ax.set_ylabel("($V_x$ – $V$) / µmol kg$^{-1}$")
 ax.text(1.09, -19, r"$A_\mathrm{T}$", ha="right")
 ax.text(1.09, -200, r"$T_\mathrm{C}$", ha="right")
 ax.text(0, 1.05, "(b)", transform=ax.transAxes)
+ax.set_ylim(-230, 10)
 
 ax = axs[2]
 ax.plot(dic / alkalinity, fCO2_ch_rmsd, label="Fixed $b_h$", c="xkcd:dark", ls="--")
@@ -99,6 +111,7 @@ ax.legend(
     loc="upper center", bbox_to_anchor=(0.5, -0.3), edgecolor="k", ncol=2, fontsize=9
 )
 ax.text(0, 1.05, "(c)", transform=ax.transAxes)
+ax.set_ylim(0.1, 1000)
 
 for ax in axs:
     ax.grid(alpha=0.2)
@@ -108,25 +121,27 @@ for ax in axs:
 fig.tight_layout()
 
 # %%
-i = 0
-fig, axs = plt.subplots(dpi=300)
-ax = axs
-# ax.plot(temperatures.ravel(), results['fCO2'][:, i], label="PyCO2SYS", c='xkcd:dark')
-ax.plot(
-    temperatures.ravel(),
-    fCO2_ch[:, i] - results["fCO2"][:, i],
-    label="Fixed $b_h$",
-    c="xkcd:cerulean",
-    ls=":",
-)
-ax.plot(
-    temperatures.ravel(),
-    fCO2_bhch[:, i] - results["fCO2"][:, i],
-    label="Fitted $b_h$",
-    c="xkcd:cerulean",
-    ls="--",
-)
-ax.legend()
-ax.axhline(0, c="k", lw=0.8)
-ax.set_xlim(-1, 35)
-ax.set_title((dic[i] / alkalinity))
+for i in range(251):
+    fig, axs = plt.subplots(dpi=300)
+    ax = axs
+    # ax.plot(temperatures.ravel(), results['fCO2'][:, i], label="PyCO2SYS", c='xkcd:dark')
+    ax.plot(
+        temperatures.ravel(),
+        fCO2_ch[:, i] - results["fCO2"][:, i],
+        label="Fixed $b_h$",
+        c="xkcd:cerulean",
+        ls=":",
+    )
+    ax.plot(
+        temperatures.ravel(),
+        fCO2_bhch[:, i] - results["fCO2"][:, i],
+        label="Fitted $b_h$",
+        c="xkcd:cerulean",
+        ls="--",
+    )
+    ax.legend()
+    ax.axhline(0, c="k", lw=0.8)
+    ax.set_xlim(-1, 35)
+    ax.set_title((dic[i] / alkalinity))
+    plt.show()
+    plt.close()

@@ -40,6 +40,7 @@ blue = "xkcd:bluish"
 pink = "xkcd:strawberry"
 orange = "xkcd:yellowish orange"
 dark = "xkcd:dark"
+green = "xkcd:sage"
 
 
 def get_eta_l(bl):
