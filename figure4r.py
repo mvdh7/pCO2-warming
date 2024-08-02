@@ -125,7 +125,7 @@ ax.plot(
     c=pwtools.dark,
     lw=1.5,
     # alpha=0.8,
-    label="$υ_l$ (Ta93, linear)",
+    label=r"$υ_l^\mathrm{Ta93}$ (Ta93, linear)",
     zorder=-1,
 )
 ax.plot(
@@ -134,7 +134,7 @@ ax.plot(
     c=pwtools.dark,
     lw=1.5,
     ls=(0, (6, 2)),
-    label="$υ_q$ (Ta93, quadratic)",
+    label=r"$υ_q^\mathrm{Ta93}$ (Ta93, quadratic)",
     zorder=2,
 )
 ax.plot(
@@ -144,7 +144,7 @@ ax.plot(
     lw=1.5,
     ls=(0, (3, 1)),
     # alpha=0.8,
-    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    label=r"$υ_h^\mathrm{Ta93}$ (van 't Hoff, $b_h$ fitted)",
     zorder=1,
 )
 ax.plot(
@@ -204,4 +204,4 @@ ax.legend(
     loc="upper center", bbox_to_anchor=(0.5, -0.15), edgecolor="k", ncol=1, fontsize=9
 )
 fig.tight_layout()
-# fig.savefig("figures_final/figure2.png")
+fig.savefig("figures_final/figure4r.png")

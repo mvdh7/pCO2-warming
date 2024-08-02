@@ -254,13 +254,13 @@ fnorm_fCO2 = linear_full_fCO2
 
 style_linear = dict(
     c=pwtools.dark,
-    label="$υ_l$ (Ta93, linear)",
+    label=r"$υ_l^\mathrm{Ta93}$ (Ta93, linear)",
     # alpha=0.9,
     lw=1.5,
 )
 style_poly = dict(
     c=pwtools.dark,
-    label="$υ_q$ (Ta93, quadratic)",
+    label=r"$υ_q^\mathrm{Ta93}$ (Ta93, quadratic)",
     # alpha=0.8,
     lw=1.5,
     ls=(0, (6, 2)),
@@ -284,7 +284,7 @@ style_pyco2_10 = dict(
 )
 style_vh = dict(
     c=pwtools.green,
-    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    label=r"$υ_h^\mathrm{LM95}$ (van 't Hoff, $b_h$ fitted)",
     # alpha=0.8,
     lw=1.5,
     ls=(0, (3, 1)),
@@ -292,14 +292,14 @@ style_vh = dict(
 )
 style_linear_LM95 = dict(
     c=pwtools.green,
-    label="$υ_l$ (LM95, linear refitted)",
+    label=r"$υ_l^\mathrm{LM95}$ (LM95, linear refitted)",
     # alpha=0.9,
     ls=(0, (1, 2)),
     lw=2,
 )
 style_poly_LM95 = dict(
     c=pwtools.green,
-    label="$υ_q$ (LM95, quadratic)",
+    label=r"$υ_q^\mathrm{LM95}$ (LM95, quadratic)",
     # alpha=0.8,
     lw=1.5,
     ls=(0, (6, 2)),
@@ -345,11 +345,11 @@ ax.set_ylabel(
 ax.set_xlim(3.5, 36.5)
 ax.set_ylim((-22, 12))
 ax.legend(
-    loc="upper center", bbox_to_anchor=(0.42, -0.15), edgecolor="k", ncol=2, fontsize=9
+    loc="upper center", bbox_to_anchor=(0.5, -0.15), edgecolor="k", ncol=2, fontsize=9
 )
 ax.grid(alpha=0.2)
 fig.tight_layout()
-fig.savefig("figures_final/extra.png")
+fig.savefig("figures_final/figure3r.png")
 
 # %% WT correction
 xCO2_headspace = fCO2 * 1e-6

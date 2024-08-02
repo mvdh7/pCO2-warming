@@ -70,13 +70,13 @@ f_linear = np.exp(v_temperature * lr_slope + lr_intercept)
 # Visualise similar to Takahashi et al. (1993) Figure A1
 style_linear = dict(
     c=pwtools.dark,
-    label="$υ_l$ (Ta93, linear)",
+    label=r"$υ_l^\mathrm{Ta93}$ (Ta93, linear)",
     # alpha=0.9,
     lw=1.5,
 )
 style_poly = dict(
     c=pwtools.dark,
-    label="$υ_q$ (Ta93, quadratic)",
+    label=r"$υ_q^\mathrm{Ta93}$ (Ta93, quadratic)",
     # alpha=0.8,
     lw=1.5,
     ls=(0, (6, 2)),
@@ -84,7 +84,7 @@ style_poly = dict(
 )
 style_vh = dict(
     c=pwtools.blue,
-    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    label=r"$υ_h^\mathrm{Ta93}$ (van 't Hoff, $b_h$ fitted)",
     # alpha=0.8,
     lw=1.5,
     ls=(0, (3, 1)),
@@ -206,4 +206,4 @@ for ax in axs:
     ax.grid(alpha=0.2)
 
 fig.tight_layout()
-# fig.savefig("figures_final/figure1.png")
+fig.savefig("figures_final/figure2r.png")

@@ -175,7 +175,7 @@ for i, fvar in enumerate(["dlnpCO2_dT", "upsh"]):
         )
     elif fvar.startswith("upsh"):
         letter = "(b)"
-        cblabel = "$υ_h$ / % °C$^{-1}$"
+        cblabel = r"$υ_h^\mathrm{Ta93}$ / % °C$^{-1}$"
     plt.colorbar(
         fm,
         location="bottom",
@@ -240,4 +240,4 @@ ax.add_feature(
 ax.text(0, 1, "(d)", transform=ax.transAxes)
 
 fig.tight_layout()
-fig.savefig("figures_final/figure5.png")
+fig.savefig("figures_final/figure6r.png")

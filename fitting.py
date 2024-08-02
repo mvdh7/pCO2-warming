@@ -3,36 +3,59 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pwtools
 
-
+temperature = t93.temperature
 fCO2 = t93.get_fCO2(10, 1)
 
-pf_linear = np.polyfit(t93.temperature, np.log(fCO2), 1)
-rmsd_linear = np.sqrt(
-    np.mean((np.exp(np.polyval(pf_linear, t93.temperature)) - fCO2) ** 2)
-)
+# # Data from Lee and Millero (1995) Table 6
+# temperature = np.array(
+#     [
+#         5.05,
+#         10,
+#         14.98,
+#         20,
+#         25,
+#         30.04,
+#         35,
+#     ]
+# )
+# fCO2 = np.array(
+#     [
+#         140,
+#         175,
+#         218,
+#         270,
+#         329,
+#         410,
+#         504,
+#     ]
+# )
 
-pf_quadratic = np.polyfit(t93.temperature, np.log(fCO2), 2)
+pf_linear = np.polyfit(temperature, np.log(fCO2), 1)
+rmsd_linear = np.sqrt(np.mean((np.exp(np.polyval(pf_linear, temperature)) - fCO2) ** 2))
+
+pf_quadratic = np.polyfit(temperature, np.log(fCO2), 2)
 rmsd_quadratic = np.sqrt(
-    np.mean((np.exp(np.polyval(pf_quadratic, t93.temperature)) - fCO2) ** 2)
+    np.mean((np.exp(np.polyval(pf_quadratic, temperature)) - fCO2) ** 2)
 )
 
-fit_vh = pwtools.fit_fCO2_vh(t93.temperature, np.log(fCO2))
-fit_vh_curve = pwtools.fit_vh_curve(t93.temperature, fCO2)
-fit_vh_pCO2 = pwtools.fit_fCO2_vh(t93.temperature, np.log(t93.pCO2))
-rmsd_vh = np.sqrt(
-    np.mean(
-        (np.exp(pwtools.get_lnfCO2_vh(fit_vh["x"], t93.temperature)) - t93.pCO2) ** 2
-    )
-)
+fit_vh = pwtools.fit_fCO2_vh(temperature, np.log(fCO2))
+fit_vh_curve = pwtools.fit_vh_curve(temperature, fCO2)
+# fit_vh_pCO2 = pwtools.fit_fCO2_vh(temperature, np.log(t93.pCO2))
+# rmsd_vh = np.sqrt(
+#     np.mean(
+#         (np.exp(pwtools.get_lnfCO2_vh(fit_vh["x"], temperature)) - t93.pCO2) ** 2
+#     )
+# )
+bh = fit_vh["x"][0]
 bh_std = np.sqrt(fit_vh_curve[1][0][0])
 
-fit_vht = pwtools.fit_fCO2_vht(t93.temperature, np.log(fCO2))
-fit_vht_pCO2 = pwtools.fit_fCO2_vht(t93.temperature, np.log(t93.pCO2))
+fit_vht = pwtools.fit_fCO2_vht(temperature, np.log(fCO2))
+fit_vht_pCO2 = pwtools.fit_fCO2_vht(temperature, np.log(t93.pCO2))
 
 # Just a 1:1 plot
 ft = np.linspace(-1.8, 35.83)
 fig, ax = plt.subplots(dpi=300)
-ax.scatter(t93.temperature, np.log(t93.pCO2))
+ax.scatter(temperature, np.log(t93.pCO2))
 ax.plot(ft, np.polyval(pf_linear, ft))
 ax.plot(ft, np.polyval(pf_quadratic, ft))
 ax.plot(ft, pwtools.get_lnfCO2_vh(fit_vh["x"], ft))
@@ -41,10 +64,10 @@ ax.plot(ft, pwtools.get_lnfCO2_vh(fit_vh["x"], ft))
 # places (compare the 'exact' with 'manual' lines - should be indistinguishable)
 fig, ax = plt.subplots(dpi=300)
 flin = np.exp(np.polyval(pf_linear, ft))
-ax.scatter(t93.temperature, t93.pCO2 - np.exp(np.polyval(pf_linear, t93.temperature)))
+ax.scatter(temperature, t93.pCO2 - np.exp(np.polyval(pf_linear, temperature)))
 ax.errorbar(
-    t93.temperature,
-    t93.pCO2 - np.exp(np.polyval(pf_linear, t93.temperature)),
+    temperature,
+    t93.pCO2 - np.exp(np.polyval(pf_linear, temperature)),
     np.sqrt(8),
     ls="none",
 )

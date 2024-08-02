@@ -93,24 +93,24 @@ else:
 # %% Visualise
 fstyle = {
     1: dict(
-        label="$υ_p$ (van 't Hoff, $b_h$ parameterised)",
+        label=r"$υ_p$ (van 't Hoff, $b_h$ parameterised)",
         c=pwtools.blue,
         lw=1.5,
     ),
     2: dict(
-        label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+        label=r"$υ_h^\mathrm{Ta93}$ (van 't Hoff, $b_h$ fitted)",
         c=pwtools.blue,
         lw=1.5,
         ls=(0, (3, 1)),
     ),
     5: dict(
-        label="$υ_l$ (Ta93, linear)",
+        label=r"$υ_l^\mathrm{Ta93}$ (Ta93, linear)",
         c=pwtools.dark,
         lw=1.5,
         zorder=10,
     ),
     6: dict(
-        label="$υ_q$ (Ta93, quadratic)",
+        label=r"$υ_q^\mathrm{Ta93}$ (Ta93, quadratic)",
         c=pwtools.dark,
         lw=1.5,
         ls=(0, (6, 2)),
@@ -146,4 +146,4 @@ ax.set_xlim((dts.min(), dts.max()))
 ax.set_ylim((0, 4))
 ax.grid(alpha=0.2)
 fig.tight_layout()
-fig.savefig("figures_final/figure8_pct.png")
+fig.savefig("figures_final/figure10r.png")

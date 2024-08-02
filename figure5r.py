@@ -149,7 +149,7 @@ ax.plot(
     100 * f_std_exp_H_l,
     c=pwtools.dark,
     lw=1.5,
-    label="$υ_l$ (Ta93, linear)",
+    label=r"$υ_l^\mathrm{Ta93}$ (Ta93, linear)",
 )
 ax.plot(
     f_t_soda,
@@ -157,7 +157,7 @@ ax.plot(
     c=pwtools.dark,
     lw=1.5,
     ls=(0, (6, 2)),
-    label="$υ_q$ (Ta93, quadratic)",
+    label=r"$υ_q^\mathrm{Ta93}$ (Ta93, quadratic)",
 )
 ax.plot(
     f_t_soda,
@@ -165,7 +165,7 @@ ax.plot(
     c=pwtools.blue,
     lw=1.5,
     ls=(0, (3, 1)),
-    label="$υ_h$ (van 't Hoff, $b_h$ fitted)",
+    label=r"$υ_h^\mathrm{Ta93}$ (van 't Hoff, $b_h$ fitted)",
 )
 ax.fill_betweenx(
     [0, 0.2],
@@ -178,10 +178,10 @@ ax.fill_betweenx(
 ax.set_ylabel(r"$σ$[exp($Y$)] for ∆$t$ = " + "${dt:+}$ °C / %".format(dt=f_dt))
 ax.set_yticks(np.arange(0, 0.3, 0.04))
 ax.set_ylim([0, 0.2])
-ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2, edgecolor="k")
+ax.legend(loc="upper center", bbox_to_anchor=(0.48, -0.15), ncol=2, edgecolor="k")
 ax.set_xlabel("$t_0$ / °C")
 ax.set_xticks(np.arange(0, 40, 5))
 ax.set_xlim(f_t_soda[[0, -1]])
 ax.grid(alpha=0.3)
 fig.tight_layout()
-fig.savefig("figures_final/figure4.png")
+fig.savefig("figures_final/figure5r.png")
