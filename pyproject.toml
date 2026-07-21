@@ -1,0 +1,31 @@
+[project]
+name = "pco2-warming"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = false
+lines-after-imports = 2
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+pyco2sys = "<2"
+xarray = ">=2026.7.0,<2027"
+cartopy = ">=0.25.0,<0.26"
+matplotlib = ">=3.11.1,<4"
+ipykernel = ">=7.3.0,<8"
+zarr = ">=3.2.1,<4"

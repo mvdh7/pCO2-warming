@@ -1,16 +1,13 @@
-from sys import path
-
-pyco2path = "/Users/matthew/github/PyCO2SYS"
-if pyco2path not in path:
-    path.append(pyco2path)
-
+# %%
+import numpy as np
 import PyCO2SYS as pyco2
 import xarray as xr
-import numpy as np
-from scipy.optimize import curve_fit
-from matplotlib import pyplot as plt
 from cartopy import crs as ccrs, feature as cfeature
+from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
+
 import pwtools
+
 
 opt_k_carbonic = 10
 opt_total_borate = 1
@@ -28,7 +25,9 @@ if not use_quickload:
     soda["month"] = soda.time.dt.month
     soda = soda.set_coords("month")
     mvars = ["talk", "dic", "temperature", "salinity"]
-    soda_monthly = xr.Dataset({v: soda[v].groupby("month").mean() for v in mvars})
+    soda_monthly = xr.Dataset(
+        {v: soda[v].groupby("month").mean() for v in mvars}
+    )
 
     # Calculate monthly surface fields of dlnfCO2/dT and fCO2
     results = pyco2.sys(
@@ -41,13 +40,18 @@ if not use_quickload:
         opt_k_carbonic=opt_k_carbonic,
         opt_total_borate=opt_total_borate,
     )
-    soda_monthly["dlnfCO2_dT"] = (("month", "lat", "lon"), results["dlnfCO2_dT"] * 1e3)
+    soda_monthly["dlnfCO2_dT"] = (
+        ("month", "lat", "lon"),
+        results["dlnfCO2_dT"] * 1e3,
+    )
     soda_monthly["fCO2"] = (("month", "lat", "lon"), results["fCO2"])
 
     # Fit bh across the globe
     soda_monthly["ex_temperature"] = ("ex_temperature", ex_temperature)
     soda_monthly = soda_monthly.set_coords("ex_temperature")
-    ex_fCO2 = np.full((*soda_monthly.dlnfCO2_dT.shape, ex_temperature.size), np.nan)
+    ex_fCO2 = np.full(
+        (*soda_monthly.dlnfCO2_dT.shape, ex_temperature.size), np.nan
+    )
 
     # This first loop, to calculate fCO2 across temperature, takes about 5 minutes
     for i, t in enumerate(ex_temperature):
@@ -62,7 +66,10 @@ if not use_quickload:
             opt_k_carbonic=opt_k_carbonic,
             opt_total_borate=opt_total_borate,
         )["fCO2"]
-    soda_monthly["ex_fCO2"] = (("month", "lat", "lon", "ex_temperature"), ex_fCO2)
+    soda_monthly["ex_fCO2"] = (
+        ("month", "lat", "lon", "ex_temperature"),
+        ex_fCO2,
+    )
 
     # This second loop, to fit values for bh (and ch), takes about 1.5 minutes
     fit_bh = np.full(soda_monthly.dlnfCO2_dT.shape, np.nan)
@@ -84,7 +91,9 @@ if not use_quickload:
     soda_monthly.to_zarr("quickload/soda_monthly.zarr")
 
 else:
-    soda_monthly = xr.open_dataset("quickload/soda_monthly.zarr", engine="zarr")
+    soda_monthly = xr.open_dataset(
+        "quickload/soda_monthly.zarr", engine="zarr"
+    )
 
 # %%
 ex_temperature = np.reshape(ex_temperature, (1, 1, 1, 50))
@@ -120,7 +129,9 @@ soda_monthly["alk_carb_bicarb"] = (
     ("month", "lat", "lon"),
     results["HCO3"] + 2 * results["CO3"],
 )
-soda_monthly["alk_non_carb_bicarb"] = soda_monthly.talk - soda_monthly.alk_carb_bicarb
+soda_monthly["alk_non_carb_bicarb"] = (
+    soda_monthly.talk - soda_monthly.alk_carb_bicarb
+)
 for v in [
     "pH",
     "CO2",
@@ -163,7 +174,12 @@ temperature = soda_monthly.temperature.data.ravel().astype(float)
 salinity = soda_monthly.salinity.data.ravel().astype(float)
 fCO2 = soda_monthly.fCO2.data.ravel()
 bh = soda_monthly.bh.data.ravel()
-L = ~np.isnan(temperature) & ~np.isnan(salinity) & ~np.isnan(fCO2) & ~np.isnan(bh)
+L = (
+    ~np.isnan(temperature)
+    & ~np.isnan(salinity)
+    & ~np.isnan(fCO2)
+    & ~np.isnan(bh)
+)
 temperature, salinity, fCO2, bh = temperature[L], salinity[L], fCO2[L], bh[L]
 t_s_fCO2 = np.array([temperature, salinity, fCO2])
 
@@ -186,7 +202,8 @@ bh_coeffs = bh_fit[0]
 # )
 bh_predicted = get_bh(t_s_fCO2, *bh_coeffs)
 soda_monthly["bh_predicted"] = get_bh(
-    (soda_monthly.temperature, soda_monthly.salinity, soda_monthly.fCO2), *bh_coeffs
+    (soda_monthly.temperature, soda_monthly.salinity, soda_monthly.fCO2),
+    *bh_coeffs,
 )
 soda_monthly["bh_diff"] = soda_monthly.bh_predicted - soda_monthly.bh
 
@@ -289,11 +306,12 @@ bhtxt = np.array(
         for r in bhcov
     ]
 )
-with open("si_predict_bh_covmx.txt", mode="w") as f:
-    for r in bhtxt:
-        for c in r:
-            f.write(c + "\t")
-        f.write("\n")
+np.savetxt("bhcov.txt", bhcov)
+# with open("si_predict_bh_covmx.txt", mode="w") as f:
+#     for r in bhtxt:
+#         for c in r:
+#             f.write(c + "\t")
+#         f.write("\n")
 
 # %% Plot where bh does and doesn't work so well
 fig, ax = plt.subplots(
